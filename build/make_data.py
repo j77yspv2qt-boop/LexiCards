@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build the bundled vocabulary tables that ship inside index.html.
 
-Inputs (raw sources cached under /tmp/lcdata, re-download them if missing):
+Raw source datasets (kept outside git, in .lcdata/ or $LC_DATA_DIR):
   oxford_full.json      Oxford learner entries: word + CEFR level + example + IPA
   kolia_package.txt     A1-B2 word lists (secondary CEFR source)
   ecdict.csv            English-Chinese dictionary: translation + phonetic + exam tags
@@ -13,6 +13,10 @@ Outputs (merged into the app by build.py):
   build/data_examples.js term -> example sentence containing the term
   build/data_extra.js   level -> extra words to grow the built-in deck
 
+Needs `pip install opencc-python-reimplemented` (Traditional conversion) and the
+raw datasets above; the four tables are optional at runtime - without them the
+app simply falls back to live API lookups.
+
 Run:  python3 build/make_data.py
 """
 import bz2
@@ -23,11 +27,16 @@ import os
 import re
 import sys
 
-SRC = "/tmp/lcdata"
 BUILD = os.path.dirname(os.path.abspath(__file__))
 
+# Raw source datasets live outside git (see README).  Point LC_DATA_DIR at
+# another folder to keep them somewhere else.
+SRC = os.environ.get("LC_DATA_DIR") or os.path.join(os.path.dirname(BUILD), ".lcdata")
+if not os.path.isdir(SRC):
+    os.makedirs(SRC, exist_ok=True)
+
 SEED = os.path.join(BUILD, "seed.js")
-REPORT = "/tmp/lcdata/DATA_REPORT.md"
+REPORT = os.path.join(SRC, "DATA_REPORT.md")
 
 LEVELS = ["A1", "A2", "B1", "B2"]
 ALL_LEVELS = ["A1", "A2", "B1", "B2", "C1"]
@@ -703,8 +712,8 @@ def main():
         dist[lv] = dist.get(lv, 0) + 1
     miss_ex = [w for w in deck_words if w not in examples]
     miss_gl = [w for w in deck_words if not gloss.get(w, {}).get("z")]
-    io.open("/tmp/lcdata/example_missing.txt", "w", encoding="utf-8").write("\n".join(miss_ex))
-    io.open("/tmp/lcdata/gloss_missing.txt", "w", encoding="utf-8").write("\n".join(miss_gl))
+    io.open(os.path.join(SRC, "example_missing.txt"), "w", encoding="utf-8").write("\n".join(miss_ex))
+    io.open(os.path.join(SRC, "gloss_missing.txt"), "w", encoding="utf-8").write("\n".join(miss_gl))
 
     import random
     random.seed(7)
@@ -731,8 +740,8 @@ def main():
         (sum(1 for t in ph_all if gloss.get(t, {}).get("z")), len(ph_all)),
         "- example for phrases+patterns: %d/%d" % (sum(1 for t in ph_all if t in examples), len(ph_all)),
         "- extras: %s" % ", ".join("%s=%d" % (lv, len(extras[lv])) for lv in LEVELS),
-        "- missing examples (deck): %d -> /tmp/lcdata/example_missing.txt" % len(miss_ex),
-        "- missing glosses (deck): %d -> /tmp/lcdata/gloss_missing.txt" % len(miss_gl),
+        "- missing examples (deck): %d -> %s" % (len(miss_ex), os.path.join(SRC, "example_missing.txt")),
+        "- missing glosses (deck): %d -> %s" % (len(miss_gl), os.path.join(SRC, "gloss_missing.txt")),
         "", "## Samples",
     ]
     for w in random.sample(deck_words, 8):
