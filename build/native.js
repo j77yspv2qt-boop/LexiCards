@@ -1,0 +1,87 @@
+/* =====================================================================
+   Native host bridge - Android APK wrapper
+
+   Everything here is optional.  In a normal browser window.LexiNative does
+   not exist, NATIVE.isNative is false and the app behaves exactly as it
+   always did (localStorage, blob download, no hardware back button).
+   ===================================================================== */
+const NATIVE = (function () {
+  const api = (typeof window !== 'undefined' && window.LexiNative) ? window.LexiNative : null;
+  const info = { api: api, isNative: !!api, platform: 'browser', sdk: 0, version: '' };
+  if (api) {
+    try { info.platform = String(api.platform() || 'android'); } catch (e) { info.platform = 'android'; }
+    try { info.sdk = Number(api.sdk()) || 0; } catch (e) { info.sdk = 0; }
+    try { info.version = String(api.appVersion() || ''); } catch (e) { info.version = ''; }
+  }
+  return info;
+})();
+
+function nativeDescribe() {
+  if (!NATIVE.isNative) return 'Running in a browser.';
+  return 'Installed app v' + (NATIVE.version || '?') + ' - ' + NATIVE.platform +
+    (NATIVE.sdk ? ' (API ' + NATIVE.sdk + ')' : '') + '.';
+}
+
+/* Android hardware / gesture back button: close a sheet first, step back one
+   level inside the app, and only then let Android leave the app. */
+window.lexiHandleBack = function () {
+  if ($('.sheet.is-open')) { closeAllSheets(); return true; }
+  if (state.view !== 'dictionary') { setView('dictionary'); return true; }
+  if (state.dictSub !== 'discover') { setDictSub('discover'); return true; }
+  return false;
+};
+
+if (NATIVE.isNative) {
+  document.documentElement.setAttribute('data-native', NATIVE.platform);
+}
+/* Text-to-speech helper: plays MP3 URL if present, or fallback online audio, native TTS, or Web Speech Synthesis */
+let _currentAudio = null;
+function speakTerm(term, audioUrl) {
+  if (!term) return;
+  if (_currentAudio) {
+    try { _currentAudio.pause(); _currentAudio.currentTime = 0; } catch (e) {}
+    _currentAudio = null;
+  }
+
+  /* Candidate audio sources */
+  const cleanTerm = term.trim();
+  const urls = [];
+  if (audioUrl) urls.push(audioUrl);
+  urls.push('https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(cleanTerm) + '&type=2');
+
+  function tryPlayUrls(idx) {
+    if (idx >= urls.length) {
+      speakFallback(cleanTerm);
+      return;
+    }
+    try {
+      const a = new Audio(urls[idx]);
+      _currentAudio = a;
+      const playPromise = a.play();
+      if (playPromise && playPromise.catch) {
+        playPromise.catch(() => {
+          tryPlayUrls(idx + 1);
+        });
+      }
+    } catch (e) {
+      tryPlayUrls(idx + 1);
+    }
+  }
+
+  tryPlayUrls(0);
+}
+
+function speakFallback(term) {
+  if (NATIVE.isNative && NATIVE.api && typeof NATIVE.api.speak === 'function') {
+    try { NATIVE.api.speak(term); return; } catch (e) {}
+  }
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(term);
+      u.lang = 'en-US';
+      u.rate = 0.9;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+}

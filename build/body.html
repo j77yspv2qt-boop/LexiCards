@@ -1,0 +1,305 @@
+<!-- ================================ APP SHELL ================================ -->
+<div class="app" id="app">
+
+  <header class="appbar">
+    <div class="appbar__row">
+      <div class="brand">
+        <button type="button" class="brand__mark" id="btnAppInfo" aria-label="App info" title="App info">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.2"/><path d="M12 7.5v.2"/></svg>
+        </button>
+        <span class="brand__name">LexiCards</span>
+      </div>
+      <nav class="maintabs" id="mainTabs" aria-label="Main sections">
+        <button type="button" class="maintab is-active" data-view="dictionary">Dictionary</button>
+        <button type="button" class="maintab" data-view="revision">Revision</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- ============================ DICTIONARY ============================ -->
+    <section class="view is-active" id="view-dictionary" aria-label="Dictionary">
+      <div class="segmented" id="dictSeg" role="tablist" aria-label="Dictionary pages">
+        <button type="button" class="seg is-active" data-sub="discover" role="tab">Discover</button>
+        <button type="button" class="seg" data-sub="mine" role="tab">My Cards</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="search" class="input input--search" id="searchDiscover" placeholder="🔍 Look up any word & press Enter..." autocomplete="off">
+        </div>
+      </div>
+      <div class="toolbar" style="margin-top:6px">
+        <select class="select" id="filterLevel" aria-label="Filter cards by level">
+          <option value="all">All levels &amp; kinds</option>
+          <option value="A1">A1 &middot; Beginner</option>
+          <option value="A2">A2 &middot; Elementary</option>
+          <option value="B1">B1 &middot; Intermediate</option>
+          <option value="B2">B2 / C1 &middot; Upper-intermediate &amp; above</option>
+          <option value="phrase">Phrases</option>
+
+          <option value="pattern">Patterns</option>
+        </select>
+
+        <button type="button" class="btn btn--ghost btn--sm" id="btnShuffle">Shuffle</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="btnCustomList">My list</button>
+      </div>
+
+      <div class="stage" id="stage">
+        <div class="stage__empty" id="stageEmpty" hidden></div>
+      </div>
+
+      <p class="hint" id="dictHint">Swipe right for next &middot; swipe left for previous &middot; drag the bottom handle to save</p>
+
+      <div class="progress">
+        <span id="dictPos">0 / 0</span>
+        <span class="progress__bar"><span class="progress__fill" id="dictFill"></span></span>
+        <span id="dictMode">Discover</span>
+      </div>
+    </section>
+
+    <!-- ============================= REVISION ============================= -->
+    <section class="view" id="view-revision" aria-label="Revision">
+      <div class="segmented" id="revSeg" role="tablist" aria-label="Revision pages">
+        <button type="button" class="seg is-active" data-sub="records" role="tab">Records</button>
+        <button type="button" class="seg" data-sub="quiz" role="tab">Quiz</button>
+      </div>
+
+      <!-- ---------- records sub-page ---------- -->
+      <div class="subview is-active" id="sub-records">
+        <div class="toolbar">
+          <input type="search" class="input" id="searchRecords" placeholder="Search terms or meanings..." autocomplete="off">
+          <select class="select" id="sortRecords" aria-label="Sort records">
+            <option value="newest">Newest</option>
+            <option value="az">A to Z</option>
+            <option value="wrong">Most missed</option>
+            <option value="seen">Most reviewed</option>
+          </select>
+          <button type="button" class="iconbtn" id="btnData" aria-label="Data and settings">&#8943;</button>
+        </div>
+        <div class="count" id="recordsCount"></div>
+        <div class="list" id="recordsList"></div>
+        <div class="empty" id="recordsEmpty" hidden>
+          <div class="empty__icon" aria-hidden="true">&#128193;</div>
+          <div class="empty__title">No records yet</div>
+          <div>Drag a card&rsquo;s bottom handle onto the save panel,<br>or tap the + button to add an entry by hand.</div>
+        </div>
+      </div>
+
+      <!-- ---------- quiz sub-page ---------- -->
+      <div class="subview" id="sub-quiz">
+        <div class="quiz" id="quizPane">
+          <div class="toolbar toolbar--quiz">
+            <select class="select" id="quizScope" aria-label="Quiz range">
+              <option value="records">My saved words</option>
+              <option value="A1">A1 &middot; Beginner</option>
+              <option value="A2">A2 &middot; Elementary</option>
+              <option value="B1">B1 &middot; Intermediate</option>
+              <option value="B2">B2 / C1 &middot; Upper-intermediate &amp; above</option>
+
+            </select>
+            <span class="count count--inline" id="quizPoolInfo"></span>
+          </div>
+          <div class="quiz__prompt" id="quizPrompt">
+            <span class="chip chip--word" id="quizType">Word</span>
+            <span class="chip chip--src" id="quizLevel" hidden></span>
+            <div class="quiz__term" id="quizTerm">&mdash;</div>
+            <div class="quiz__phon" id="quizPhon"></div>
+          </div>
+          <div class="quiz__ask" id="quizAsk">Which one is the meaning?</div>
+          <div class="quiz__options" id="quizOptions" role="group" aria-label="Meaning options"></div>
+          <div class="quiz__feedback" id="quizFeedback"></div>
+          <div class="quiz__answer" id="quizAnswer" hidden></div>
+          <div class="quiz__actions">
+            <button type="button" class="btn btn--primary btn--sm" id="btnQuizNext" hidden>&#10003; Next</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="btnQuizAdd" hidden>+ Add to Records</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="btnQuizSkip">Skip</button>
+            <button type="button" class="btn btn--ghost btn--sm" id="btnQuizReset">Reset round</button>
+          </div>
+          <div class="quiz__stats">
+            <div class="stat"><div class="stat__v" id="stTotal">0</div><div class="stat__k">Round</div></div>
+            <div class="stat stat--ok"><div class="stat__v" id="stCorrect">0</div><div class="stat__k">Correct</div></div>
+            <div class="stat stat--no"><div class="stat__v" id="stWrong">0</div><div class="stat__k">Missed</div></div>
+            <div class="stat"><div class="stat__v" id="stStreak">0</div><div class="stat__k">Streak</div></div>
+            <div class="stat"><div class="stat__v" id="stAcc">&mdash;</div><div class="stat__k">Accuracy</div></div>
+          </div>
+          <div class="empty" id="quizEmpty" hidden>
+            <div class="empty__icon" aria-hidden="true">&#128221;</div>
+            <div class="empty__title">Nothing to test yet</div>
+            <div>Save a few words first &mdash; Quiz will then ask you<br>to pick their meaning.</div>
+          </div>
+          <div class="quiz__wronglist" id="quizWrongList"></div>
+        </div>
+      </div>
+
+
+      <button type="button" class="fab" id="fabAdd" aria-label="New entry"><span aria-hidden="true">+</span></button>
+    </section>
+
+  </main>
+
+  <!-- ============================ DROP ZONE ============================ -->
+  <div class="dropzone" id="dropzone" aria-hidden="true">
+    <div class="dropzone__inner">
+      <div class="dropzone__icon" aria-hidden="true">+</div>
+      <div class="dropzone__text">
+        <strong id="dzTitle">Drop to save</strong>
+        <span id="dzSub">Release here to add this card to Revision</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== SHEETS ============================== -->
+  <div class="scrim" id="scrim"></div>
+
+  <!-- new / edit entry -->
+  <div class="sheet" id="sheetEntry" role="dialog" aria-modal="true" aria-labelledby="entryTitle" aria-hidden="true">
+    <div class="sheet__panel">
+      <div class="sheet__head">
+        <h2 id="entryTitle">New entry</h2>
+        <button type="button" class="iconbtn" data-close="sheetEntry" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="sheet__body">
+        <label class="field">
+          <span class="field__label">Term</span>
+          <input type="text" class="input" id="fTerm" placeholder="word, phrase or sentence pattern" autocomplete="off" autocapitalize="off" spellcheck="false">
+        </label>
+        <div class="field">
+          <span class="field__label">Type</span>
+          <div class="segmented segmented--sm" id="fType" role="tablist">
+            <button type="button" class="seg is-active" data-type="word">Word</button>
+            <button type="button" class="seg" data-type="phrase">Phrase</button>
+            <button type="button" class="seg" data-type="pattern">Pattern</button>
+          </div>
+        </div>
+        <div class="fetchrow">
+          <button type="button" class="btn btn--ghost btn--sm" id="btnFetch">Fetch meaning</button>
+          <span class="fetchrow__status" id="fetchStatus">Free Dictionary API + translation, then you can edit.</span>
+        </div>
+        <label class="field">
+          <span class="field__label">Meaning in Traditional Chinese</span>
+          <textarea class="input" id="fZh" rows="2" placeholder="One sense per line, or separate with /"></textarea>
+          <span class="field__hint">Each line becomes one sense. Extra answers for Quiz can be added with / .</span>
+        </label>
+        <label class="field">
+          <span class="field__label">English explanation</span>
+          <textarea class="input" id="fEn" rows="3" placeholder="One explanation per line"></textarea>
+        </label>
+        <label class="field">
+          <span class="field__label">Phonetic (optional)</span>
+          <input type="text" class="input" id="fPhon" placeholder="/&#716;ser&#601;n&#712;dip&#601;ti/">
+        </label>
+        <label class="field">
+          <span class="field__label">Note (optional)</span>
+          <input type="text" class="input" id="fNote" placeholder="Where you met it, collocations...">
+        </label>
+        <label class="field">
+          <span class="field__label">Tags (optional, comma separated)</span>
+          <input type="text" class="input" id="fTags" placeholder="reading, work, IELTS">
+        </label>
+      </div>
+      <div class="sheet__foot">
+        <button type="button" class="btn btn--danger" id="btnDeleteEntry" hidden>Delete</button>
+        <button type="button" class="btn btn--ghost" data-close="sheetEntry">Cancel</button>
+        <button type="button" class="btn btn--primary" id="btnSaveEntry">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- custom list -->
+  <div class="sheet" id="sheetCustom" role="dialog" aria-modal="true" aria-labelledby="customTitle" aria-hidden="true">
+    <div class="sheet__panel">
+      <div class="sheet__head">
+        <h2 id="customTitle">My own list</h2>
+        <button type="button" class="iconbtn" data-close="sheetCustom" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="sheet__body">
+        <label class="field">
+          <span class="field__label">One term per line</span>
+          <textarea class="input" id="fCustom" rows="8" placeholder="resilient&#10;take it for granted&#10;the more ..., the more ..."></textarea>
+          <span class="field__hint">These are added on top of the built-in deck in Discover. Meanings are still fetched from the API.</span>
+        </label>
+      </div>
+      <div class="sheet__foot">
+        <button type="button" class="btn btn--ghost" data-close="sheetCustom">Cancel</button>
+        <button type="button" class="btn btn--primary" id="btnSaveCustom">Save list</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- data & settings -->
+  <div class="sheet" id="sheetData" role="dialog" aria-modal="true" aria-labelledby="dataTitle" aria-hidden="true">
+    <div class="sheet__panel">
+      <div class="sheet__head">
+        <h2 id="dataTitle">Data &amp; settings</h2>
+        <button type="button" class="iconbtn" data-close="sheetData" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="sheet__body">
+        <div class="switchrow" id="swHaptics" role="switch" aria-checked="true" tabindex="0">
+          <span>Vibration feedback</span><span class="switch"></span>
+        </div>
+        <div class="switchrow" id="swTricky" role="switch" aria-checked="true" tabindex="0">
+          <span>Tricky Quiz options (confusable words as distractors)</span><span class="switch"></span>
+        </div>
+        <div class="field">
+          <span class="field__label">Storage</span>
+          <span class="field__hint" id="storageInfo"></span>
+        </div>
+        <div class="field">
+          <span class="field__label">Records backup</span>
+          <span class="field__hint" id="backupInfo"></span>
+        </div>
+
+        <div class="field">
+          <span class="field__label">Lookup speed</span>
+          <span class="field__hint" id="speedInfo"></span>
+        </div>
+        <div class="databtns">
+          <button type="button" class="btn btn--ghost btn--sm" id="btnExport">Export JSON</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnImport">Import JSON</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnRestore">Restore from backup</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnClearCache">Clear meaning cache</button>
+          <button type="button" class="btn btn--danger btn--sm" id="btnClearAll">Delete all records</button>
+        </div>
+
+        <input type="file" id="fileImport" accept="application/json,.json" hidden>
+      </div>
+      <div class="sheet__foot">
+        <button type="button" class="btn btn--primary" data-close="sheetData">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- app info: version + Definition in Chinese script -->
+  <div class="sheet" id="sheetInfo" role="dialog" aria-modal="true" aria-labelledby="infoTitle" aria-hidden="true">
+    <div class="sheet__panel">
+      <div class="sheet__head">
+        <h2 id="infoTitle">App info</h2>
+        <button type="button" class="iconbtn" data-close="sheetInfo" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="sheet__body">
+        <div class="field">
+          <span class="field__label">LexiCards</span>
+          <span class="field__hint" id="appVersionInfo"></span>
+        </div>
+        <div class="field">
+          <span class="field__label">Definition in Chinese</span>
+          <span class="field__hint">Choose the script used for Chinese definitions on cards.</span>
+        </div>
+        <div class="segmented" id="defLangSeg" role="tablist" aria-label="Definition language">
+          <button type="button" class="seg" data-lang="traditional" role="tab">Traditional</button>
+          <button type="button" class="seg" data-lang="simplified" role="tab">Simplified</button>
+        </div>
+      </div>
+      <div class="sheet__foot">
+        <button type="button" class="btn btn--primary" data-close="sheetInfo">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite" aria-atomic="false"></div>
+</div>
+
+
+
