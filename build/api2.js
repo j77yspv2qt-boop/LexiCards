@@ -1,6 +1,7 @@
 /* ------------------- cache + orchestrator: getMeaning() ------------------- */
 const INFLIGHT = new Map();
 const PATCHES = new Map();                 /* meaningKey -> promise of the bilingual step */
+const EX_PATCHES = new Map();              /* meaningKey -> promise of the example step */
 const MEANING_PATCH_LISTENERS = [];
 
 /* the card layer subscribes here to fill in the "Definition in Chinese" block
@@ -101,6 +102,37 @@ function startBilingualPatch(key, out) {
   return patch;
 }
 
+/* ---- the example sentence is healed the same way as the translation --------
+   A card is supposed to show an example, but an entry cached before the
+   bundled example table existed (or a searched word the table does not know)
+   has none: the English API does not always return one.  Fill it from the
+   bundled table when possible, otherwise fetch a sentence, and repaint the
+   card when it lands. */
+function startExamplePatch(key, out) {
+  if (EX_PATCHES.has(key)) return EX_PATCHES.get(key);
+  const job = (function () {
+    if (out.example) return Promise.resolve(out);
+    const bundled = offlineExample(out.term);
+    if (bundled) { out.example = bundled; return Promise.resolve(out); }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve(out);
+    return fetchExampleSentence(out.term, out.type || 'word').then(sentence => {
+      if (sentence && !out.example) out.example = sentence;
+      return out;
+    }, () => out);
+  })().then(res => {
+    state.cache[key] = res;
+    saveCacheSoon();
+    notifyMeaningPatch(res);
+    EX_PATCHES.delete(key);
+    return res;
+  }, err => {
+    EX_PATCHES.delete(key);
+    throw err;
+  });
+  EX_PATCHES.set(key, job);
+  return job;
+}
+
 function getMeaning(term, type, force) {
   const key = meaningKey(term, type);
   if (!force) {
@@ -116,6 +148,11 @@ function getMeaning(term, type, force) {
         hit.patchTries = (hit.patchTries || 0) + 1;
         startBilingualPatch(key, hit);
       }
+      /* self-heal: an entry without an example gets one (see startExamplePatch) */
+      if (!hit.example && !EX_PATCHES.has(key) && (hit.exampleTries || 0) < 3) {
+        hit.exampleTries = (hit.exampleTries || 0) + 1;
+        startExamplePatch(key, hit);
+      }
       return Promise.resolve(hit);
     }
     if (INFLIGHT.has(key)) return INFLIGHT.get(key);
@@ -123,7 +160,7 @@ function getMeaning(term, type, force) {
 
   const job = (async function () {
     const out = {
-      term: term, en: [], zh: [], defZh: [], phonetic: '', audio: '',
+      term: term, type: type || 'word', en: [], zh: [], defZh: [], phonetic: '', audio: '',
       example: '', exampleZh: '',
       source: 'none', ok: false, note: '', fetchedAt: Date.now()
     };
@@ -180,6 +217,9 @@ function getMeaning(term, type, force) {
        Deliberately not awaited: the card is already readable, and this block
        pops in as soon as the translation answers. */
     startBilingualPatch(key, out);
+    /* ---- and the example sentence: nothing to do when the entry already has
+       one, otherwise a sentence is fetched and the card picks it up late ---- */
+    if (!out.example) startExamplePatch(key, out);
 
     return out;
   })();

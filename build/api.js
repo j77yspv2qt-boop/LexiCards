@@ -91,6 +91,79 @@ function lookupDatamuse(term) {
   });
 }
 
+/* ---- 4) example sentence only: wikitext usage lines of a Wiktionary entry ----
+   The Free Dictionary API and the Wiktionary REST endpoint carry an example for
+   many words, but not for all of them, and for a phrase they carry none at all
+   - a searched phrase then stayed without a sentence.  The action API returns
+   the raw entry, whose "#:" usage lines are real corpus sentences and exist for
+   multi-word entries too. */
+function cleanWikiText(s) {
+  return stripHTML(String(s)
+    .replace(/\{\{[^{}]*\}\}/g, ' ')                  /* templates */
+    .replace(/\[\[([^\]|]*\|)?([^\]]*)\]\]/g, '$2')   /* links keep their label */
+    .replace(/''+/g, '')                              /* bold / italic markup */
+    .replace(/<[^>]+>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function lookupWiktionaryText(term) {
+  const url = 'https://en.wiktionary.org/w/api.php?action=parse&prop=wikitext&format=json&origin=*' +
+    '&redirects=1&page=' + encodeURIComponent(term);
+  return fetchJSON(url, API_TIMEOUT).then(data => {
+    const wt = data && data.parse && data.parse.wikitext && data.parse.wikitext['*'];
+    if (!wt) throw new Error('no entry');
+    const out = [];
+    String(wt).split('\n').forEach(line => {
+      if (line.indexOf('#:') !== 0 && line.indexOf('#*') !== 0) return;
+      const text = cleanWikiText(line.replace(/^#[:*]\s*/, ''));
+      if (text.length >= 8 && text.length <= 170) out.push(text);
+    });
+    if (!out.length) throw new Error('no example');
+    return out;
+  });
+}
+
+/* a sentence that actually contains the term is worth much more than one that
+   does not - the highlight is the point of showing the example */
+function sentenceHasTerm(sentence, term) {
+  return markHits(sentence, term).indexOf('ex-hit') >= 0;
+}
+function pickSentence(candidates, term) {
+  const list = candidates.map(s => String(s || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  for (let i = 0; i < list.length; i++) if (sentenceHasTerm(list[i], term)) return list[i];
+  return list[0] || '';
+}
+
+const EXAMPLE_CHAIN = [
+  { id: 'dictionaryapi',       label: 'Dictionary API', fn: lookupFreeDictionary },
+  { id: 'wiktionary',          label: 'Wiktionary',     fn: lookupWiktionary },
+  { id: 'wiktionary-wikitext', label: 'Wiktionary',     fn: lookupWiktionaryText }
+];
+
+/* one example sentence for `term`, from whichever source has one; used for a
+   word or phrase the bundled table does not carry (that is: a searched term) */
+function fetchExampleSentence(term, type) {
+  let chain = Promise.reject(new Error('no example available'));
+  EXAMPLE_CHAIN.forEach(p => {
+    if (providerIsDown(p.id)) return;
+    chain = chain.catch(() => {
+      const at = Date.now();
+      return p.fn(term).then(res => {
+        noteProviderResult(p.id, true, Date.now() - at);
+        const list = Array.isArray(res) ? res : (res && res.example ? [res.example] : []);
+        const sentence = pickSentence(list, term);
+        if (!sentence) throw new Error('no example');
+        return sentence;
+      }, err => {
+        noteProviderResult(p.id, false, Date.now() - at);
+        throw err;
+      });
+    });
+  });
+  return chain;
+}
+
 /* ---- Traditional Chinese translation (en -> zh-TW) ---- */
 function translateToZh(text) {
   const url = 'https://api.mymemory.translated.net/get?q=' +

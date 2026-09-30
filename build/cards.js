@@ -62,6 +62,22 @@ function skeletonsHTML() {
    words must match on a word boundary - "an" never lights up inside "and" -
    and a pattern like "the more ..., the more ..." is highlighted piece by
    piece, since the dots never appear in the sentence. */
+/* a corpus sentence rarely repeats the headword exactly (adopt -> adopted,
+   study -> studies, sing -> singing); without the inflections the example of
+   such a word never lights up at all */
+function wordForms(word) {
+  const w = String(word || '').toLowerCase();
+  if (!/^[a-z]+$/.test(w)) return [];
+  const out = [];
+  const add = f => { if (f && f !== w && out.indexOf(f) < 0) out.push(f); };
+  add(w + 's'); add(w + 'es'); add(w + 'ed'); add(w + 'd'); add(w + 'ing');
+  add(w + 'ly'); add(w + 'er'); add(w + 'est');
+  if (/e$/.test(w)) { add(w.slice(0, -1) + 'ing'); add(w.slice(0, -1) + 'ed'); }
+  if (/y$/.test(w)) { add(w.slice(0, -1) + 'ies'); add(w.slice(0, -1) + 'ied'); add(w.slice(0, -1) + 'ier'); add(w.slice(0, -1) + 'iest'); }
+  if (/[^aeiou][aeiou][^aeiouwxy]$/.test(w)) { const c = w[w.length - 1]; add(w + c + 'ed'); add(w + c + 'ing'); }
+  return out;
+}
+
 function markHits(text, needle) {
   const t = String(text || '');
   const raw = String(needle || '').replace(/^[a-z]+\.\s*/i, '').trim();
@@ -72,10 +88,9 @@ function markHits(text, needle) {
     : [raw];
   const lo = t.toLowerCase();
   const hits = [];
-  needles.forEach(n => {
+  function collect(n, whole) {
     const ln = n.toLowerCase();
     if (!ln) return;
-    const whole = /^[a-z]+$/i.test(n);
     let from = 0, at;
     while ((at = lo.indexOf(ln, from)) >= 0) {
       const before = at > 0 ? t[at - 1] : '';
@@ -83,7 +98,12 @@ function markHits(text, needle) {
       if (!whole || (!/[a-z]/i.test(before) && !/[a-z]/i.test(after))) hits.push([at, ln.length]);
       from = at + 1;
     }
-  });
+  }
+  needles.forEach(n => collect(n, /^[a-z]+$/i.test(n)));
+  /* second pass: an inflected form of a single-word headword */
+  if (!hits.length && needles.length === 1 && /^[a-z]+$/i.test(raw) && raw.length >= 3) {
+    wordForms(raw).forEach(f => collect(f, true));
+  }
   if (!hits.length) return escapeHTML(t);
 
   hits.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
@@ -95,6 +115,56 @@ function markHits(text, needle) {
     at = h[0] + h[1];
   });
   return out + escapeHTML(t.slice(at));
+}
+
+/* ---------------------- Chinese side of the example ----------------------
+   The translation is machine-made, so it seldom repeats the glossary wording:
+   the gloss of "sing" is 唱歌 while the sentence reads 唱這首歌.  Searching for
+   the gloss verbatim therefore misses most of the time and the Chinese line
+   shows no highlight at all.  Try the senses one by one, then mark the longest
+   run the sentence and a sense really share. */
+function zhSenses(gloss) {
+  return String(gloss == null ? '' : gloss)
+    .split(/[\/、；;，,（）()【】\[\]]|\s+/)
+    .map(s => s.replace(/^[a-z]+\.\s*/i, '').trim())
+    .filter(s => /[\u3400-\u9FFF\uF900-\uFAFF]/.test(s));
+}
+
+function longestSharedRun(text, sense) {
+  const a = String(text || ''), b = String(sense || '');
+  let best = null;
+  for (let i = 0; i < a.length; i++) {
+    for (let j = 0; j < b.length; j++) {
+      let n = 0;
+      while (i + n < a.length && j + n < b.length && a[i + n] === b[j + n]) n++;
+      if (n > 0 && (!best || n > best.len)) best = { at: i, len: n, whole: n === b.length };
+    }
+  }
+  return best;
+}
+
+function markZhHits(text, gloss) {
+  const t = String(text == null ? '' : text);
+  if (!t) return '';
+  const senses = zhSenses(gloss);
+  for (let i = 0; i < senses.length; i++) {
+    const marked = markHits(t, senses[i]);
+    if (marked.indexOf('ex-hit') >= 0) return marked;
+  }
+  /* no sense appears as it stands: mark the longest stretch a sense and the
+     sentence really share.  A single character is enough for a short gloss
+     (唱歌 -> 唱這首歌), two are required for a longer one, so a stray 的 or 是
+     never lights up. */
+  let best = null;
+  senses.forEach(s => {
+    const run = longestSharedRun(t, s);
+    if (!run || run.len < (s.length <= 2 ? 1 : 2)) return;
+    if (!best || run.len > best.len) best = run;
+  });
+  if (!best) return escapeHTML(t);
+  return escapeHTML(t.slice(0, best.at)) +
+    '<b class="ex-hit">' + escapeHTML(t.substr(best.at, best.len)) + '</b>' +
+    escapeHTML(t.slice(best.at + best.len));
 }
 
 function meaningBlocksHTML(m, type, opts) {
@@ -148,7 +218,7 @@ function meaningBlocksHTML(m, type, opts) {
     html += '<div class="defblock defblock--example" data-example>' +
       '<div class="defblock__label defblock__label--en">Example Sentence</div>' +
       '<div class="card__example">' + markHits(m.example, m.term) + '</div>' +
-      (m.exampleZh ? '<div class="card__example-zh">' + markHits(displayZh(m.exampleZh), gloss) + '</div>' : '') +
+      (m.exampleZh ? '<div class="card__example-zh">' + markZhHits(displayZh(m.exampleZh), displayZh(gloss)) + '</div>' : '') +
       '</div>';
   }
   return html;

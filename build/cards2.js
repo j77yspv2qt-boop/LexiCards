@@ -125,7 +125,23 @@ function applyMeaningPatch(m) {
         zhEl.className = 'card__example-zh';
         exBlock.appendChild(zhEl);
       }
-      zhEl.textContent = displayZh(m.exampleZh);
+      /* keep the highlight: this line used to be plain text, which is why the
+         word was lit up in the English sentence but never in the Chinese one */
+      zhEl.innerHTML = markZhHits(displayZh(m.exampleZh), displayZh((m.zh && m.zh.length) ? m.zh[0] : ''));
+    } else if (!exBlock && m.example) {
+      /* the example itself only turned up now (a cached entry that had none, or
+         a slow sentence lookup) - draw the block instead of dropping it */
+      const scroller = $('[data-scroller]', el);
+      if (scroller) {
+        const gloss = (m.zh && m.zh.length) ? m.zh[0] : '';
+        const block = document.createElement('div');
+        block.className = 'defblock defblock--example';
+        block.setAttribute('data-example', '');
+        block.innerHTML = '<div class="defblock__label defblock__label--en">Example Sentence</div>' +
+          '<div class="card__example">' + markHits(m.example, m.term) + '</div>' +
+          (m.exampleZh ? '<div class="card__example-zh">' + markZhHits(displayZh(m.exampleZh), displayZh(gloss)) + '</div>' : '');
+        scroller.appendChild(block);
+      }
     }
   });
 }

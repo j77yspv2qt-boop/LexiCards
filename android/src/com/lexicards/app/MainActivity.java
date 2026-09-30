@@ -51,7 +51,13 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String appVersion() {
-            return "1.3";
+            /* read the real versionName from the manifest, so the App info sheet
+               and the update check never disagree with the installed build */
+            try {
+                return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            } catch (Exception e) {
+                return "1.6";
+            }
         }
 
         @JavascriptInterface
@@ -70,6 +76,28 @@ public class MainActivity extends Activity {
                             }
                         }
                     } catch (Throwable ignored) {
+                    }
+                }
+            });
+        }
+
+        /* the App info sheet hands the APK download (or the releases page) to
+           the system browser - the browser does the download and Android
+           installs the file, so no new permission is needed here */
+        @JavascriptInterface
+        public void openExternal(final String url) {
+            if (url == null || url.trim().isEmpty()) return;
+            final String target = url.trim();
+            if (!target.startsWith("http://") && !target.startsWith("https://")) return;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(target));
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Toast.makeText(MainActivity.this, "No app can open that link", Toast.LENGTH_SHORT).show();
                     }
                 }
             });

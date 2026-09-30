@@ -16,7 +16,7 @@ const LS_KEYS = {
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.6';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */

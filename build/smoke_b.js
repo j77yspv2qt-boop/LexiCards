@@ -288,6 +288,108 @@
     var prevTerm = document.querySelector('#stage .card--top').getAttribute('data-term');
     step('swiping left returns to the previous card', prevTerm === startTerm,
       prevTerm + ' (expected ' + startTerm + ')');
+    /* ---- 14. v1.6 fixes: script table, highlights, examples, update check ---- */
+
+    /* 14a. the simplified -> traditional table (人權 used to print as 人杠
+       because a non-BMP pair shifted the old build by one UTF-16 unit) */
+    step('script table: Traditional text is left untouched',
+      toTrad('人權') === '人權' && toTrad('權利與組織') === '權利與組織', toTrad('人權'));
+    step('script table: Simplified text still converts',
+      toTrad('人权') === '人權' && toTrad('组织机构') === '組織機構', toTrad('人权'));
+    step('script table: Traditional converts back to Simplified',
+      toSimp('人權') === '人权' && toSimp('習慣') === '习惯', toSimp('人權'));
+    step('script table: every pair maps to its Traditional character', (function () {
+      var cps = Array.from(S2T_PAIRS), bad = 0;
+      for (var i = 0; i + 1 < cps.length; i += 2) if (toTrad(cps[i]) !== cps[i + 1]) bad++;
+      return bad === 0;
+    })(), 'pairs checked: ' + Math.floor(Array.from(S2T_PAIRS).length / 2));
+    step('script table: corrupted text left by the old build is repaired',
+      repairScript('人杠') === '人權' && repairScript('杀枞') === '機構' && repairScript('人權') === '人權',
+      repairScript('人杠') + ' / ' + repairScript('杀枞'));
+    state.cache[meaningKey('right', 'word')] = {
+      term: 'right', type: 'word', zh: ['杠利'], defZh: [], en: [],
+      phonetic: '', audio: '', example: '', exampleZh: '性自由是必要的人杠。',
+      source: 'translation', ok: true, fetchedAt: Date.now()
+    };
+    state.settings.scriptFix = 0;
+    repairLegacyScriptData();
+    var repaired = state.cache[meaningKey('right', 'word')];
+    step('stored Chinese from the old table is repaired once',
+      repaired.exampleZh === '性自由是必要的人權。' && repaired.zh[0] === '權利',
+      repaired.exampleZh + ' / ' + repaired.zh[0]);
+    var typedRec = upsertRecord({ term: 'gong', type: 'word', zh: ['杠'], source: 'manual' });
+    state.settings.scriptFix = 0;
+    repairLegacyScriptData();
+    step('a meaning typed by hand is never rewritten', typedRec.zh[0] === '杠', typedRec.zh[0]);
+
+    /* 14b. highlighting, both sides of the example */
+    step('English highlight covers inflected forms',
+      markHits('Birds are singing in the trees.', 'sing').indexOf('ex-hit') > 0 &&
+      markHits('The policy was adopted last year.', 'adopt').indexOf('ex-hit') > 0,
+      markHits('Birds are singing in the trees.', 'sing'));
+    step('English highlight keeps whole-word matching',
+      markHits('He landed in the sand.', 'an').indexOf('ex-hit') < 0);
+    step('Chinese highlight marks a shared part of the gloss',
+      markZhHits('我們希望你唱這首歌。', '唱歌').indexOf('ex-hit') > 0,
+      markZhHits('我們希望你唱這首歌。', '唱歌'));
+    step('Chinese highlight marks an exact gloss',
+      markZhHits('性自由是必要的人權。', '人權').indexOf('ex-hit') > 0,
+      markZhHits('性自由是必要的人權。', '人權'));
+    step('Chinese highlight does not light up a stray character',
+      markZhHits('這是一個例子。', '倫理').indexOf('ex-hit') < 0);
+
+    /* 14c. a cached meaning without an example is healed (the card that showed
+       no sentence at all, e.g. "ethical") */
+    state.cache[meaningKey('ethical', 'word')] = {
+      term: 'ethical', type: 'word', en: [{ pos: 'adj', text: 'of or relating to ethics' }],
+      zh: ['倫理的'], defZh: [], phonetic: '', audio: '', example: '', exampleZh: '',
+      source: 'dictionaryapi', ok: true, fetchedAt: Date.now()
+    };
+    saveCache();
+    var healed = await getMeaning('ethical', 'word');
+    step('cached entry without an example is healed from the bundled table',
+      !!healed.example && healed.example.toLowerCase().indexOf('ethical') >= 0, healed.example);
+    await wait(30);
+    step('the healed example is written back to the cache',
+      !!state.cache[meaningKey('ethical', 'word')].example,
+      state.cache[meaningKey('ethical', 'word')].example);
+    /* 14d. an example sentence for a term the bundled table does not know */
+    var wt = await lookupWiktionaryText('sing');
+    step('wikitext usage lines are used as example candidates',
+      Array.isArray(wt) && wt.length >= 1 && wt[0].indexOf('sings') > 0, wt[0]);
+    step('a candidate that contains the term is preferred',
+      pickSentence(['Nothing here at all.', 'A stub sings.'], 'sings') === 'A stub sings.',
+      pickSentence(['Nothing here at all.', 'A stub sings.'], 'sings'));
+    state.deck = [];
+    state.deckIndex = 0;
+    lookupInstantTerm('zorbulate');
+    await wait(340);
+    var zorb = state.cache[meaningKey('zorbulate', 'word')];
+    step('a searched term gets an example sentence', !!zorb && !!zorb.example,
+      zorb ? zorb.example : 'no cache entry');
+    var zCard = document.querySelector('#stage .card--top');
+    step('the searched card renders the example block',
+      !!zCard && !!zCard.querySelector('[data-example]'),
+      zCard ? zCard.querySelector('.card__example').textContent : 'no card');
+
+    /* 14e. the GitHub update check */
+    step('version compare handles multi-digit parts',
+      compareVersion('1.10', '1.9') > 0 && compareVersion('1.6', '1.6') === 0 &&
+      compareVersion('1.5', '1.6') < 0 && compareVersion('v1.7', '1.6') > 0);
+    await checkForUpdate(true);
+    if (updateState.version !== '9.9') await checkForUpdate(true);
+    step('update check reads the newest release from GitHub',
+      updateState.version === '9.9' && updateState.newer === true, updateState.version);
+    step('update check prefers the APK asset of the release',
+      updateState.url.indexOf('LexiCards-v9.9.apk') >= 0, updateState.url);
+    syncUpdateUI();
+    step('app info offers the download of the newer release',
+      document.getElementById('btnInstallUpdate').hidden === false &&
+      document.getElementById('btnInstallUpdate').textContent.indexOf('9.9') >= 0,
+      document.getElementById('btnInstallUpdate').textContent);
+    step('app info names the newer release',
+      /9\.9/.test(document.getElementById('updateInfo').textContent),
+      document.getElementById('updateInfo').textContent);
   } catch (err) {
     R.ok = false;
     R.steps.push({ name: 'exception thrown', pass: false, info: String((err && err.stack) || err).slice(0, 400) });

@@ -14,7 +14,7 @@ JS = ["core.js", "core2.js",
       "api.js", "api2.js",
       "cards.js", "cards2.js", "gesture.js", "gesture2.js", "dict.js",
       "records.js", "entry.js", "data.js", "quiz.js", "quiz2.js",
-      "nav.js", "native.js", "init.js"]
+      "nav.js", "native.js", "update.js", "init.js"]
 
 # The bundled vocabulary tables are large and arrive from the data pipeline;
 # the app still builds without them (it just falls back to live API lookups).

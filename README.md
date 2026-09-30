@@ -5,7 +5,7 @@
 內建 Oxford 3000/5000 完整詞庫的中文釋義、音標與例句，**沒有網路也能學**；測驗以 CEFR 程度出題，答題有干擾項、動畫與震動回饋；所有記錄只存在你自己的裝置，並且有滾動備份。
 
 - 網頁版：`index.html`（零依賴、零建置，雙擊即用）
-- Android 版：Releases 頁的 `LexiCards.apk`（v1.4，約 820 KB）
+- Android 版：Releases 頁的 `LexiCards.apk`（v1.6，約 820 KB）
 
 ---
 
@@ -63,7 +63,7 @@ python3 -m http.server 8000
 - **發音鈕**：Web Speech API 發音，Android 版走原生 TTS
 - **中文釋義（Definition in Chinese）**：上線時顯示翻譯後的完整定義；離線或翻譯失敗時退回內建詞義
 - **英文解釋**：Free Dictionary API → Wiktionary → Datamuse 依序備援
-- **例句（Example Sentence）**：內建語料挑選，**句子中的詞彙會高亮**；中文例句在上線後非同步補上
+- **例句（Example Sentence）**：內建語料挑選，**英文與中文例句裡的詞彙都會高亮**（中文譯文在非同步補上後同樣會標出對應的詞）；內建表查不到、或你自行搜尋的字，會另外向線上來源補抓一句
 - **來源標籤**：`Dictionary API` / `Wiktionary` / `Datamuse` / `Translation only` / `Built-in list` / `Manual`
 - **狀態標籤**：`Saved`（剛存檔）、`My list`（自訂詞表）、`Record`（已記錄）
 - **失敗時**：若該詞連內建表都沒有，卡片會顯示 `Retry` 按鈕與失敗原因
@@ -135,8 +135,9 @@ python3 -m http.server 8000
 
 ### 2.7 App info（應用資訊）
 
-- 目前版本
+- 目前版本（Android 版直接讀取 APK 的 `versionName`）
 - **Definition in Chinese**：繁體 / 簡體切換，卡片、Quiz 選項與例句譯文都會即時跟著切換
+- **Updates**：見第 5.2 節「App 內更新檢查」
 
 ---
 
@@ -194,6 +195,7 @@ python3 -m http.server 8000
 | ↳ 備援 2 | **Datamuse** | 再失敗才用 |
 | 中文詞義 / 定義翻譯 | **MyMemory** → **Google 翻譯** | 詞彙本身與第一條英文定義各翻一次，得到雙語對照 |
 | 例句中文翻譯 | 同上 | 非同步補上，不阻塞卡片顯示 |
+| 缺例句時的補抓 | **Free Dictionary API** → **Wiktionary REST** → **Wiktionary 原始碼** | 內建表查不到、又沒搜過的詞（例如自行輸入的字）才會走這條鏈；Wiktionary 原始碼裡的 `#:` 用例行連片語都查得到 |
 
 工程細節：
 
@@ -232,7 +234,7 @@ python3 -m http.server 8000
 
 ## 5. Android APK
 
-- **版本**：1.4（versionCode 3，minSdk 24 / targetSdk 35），約 820 KB，零額外依賴
+- **版本**：1.6（versionCode 5，minSdk 24 / targetSdk 35），約 820 KB，零額外依賴
 - **權限**：僅 `INTERNET`、`ACCESS_NETWORK_STATE`、`VIBRATE`
 - **安裝**：從 Releases 下載 APK → 允許安裝未知來源 → 完成
 - **升級**：直接安裝新版本即可覆蓋，記錄保留（見第 4 節）
@@ -244,6 +246,45 @@ python3 build_apk.py
 ```
 
 腳本會自動把最新的 `index.html` 同步進 `assets/`、編譯資源與 dex、對齊並重新簽署成根目錄的 `LexiCards.apk`（簽章金鑰 `android/debug.keystore` 為本機檔案，已排除在 git 之外；首次建置時若不存在會自動產生）。
+
+### 5.2 App 內更新檢查
+
+App info 面板多了一個 **Updates** 區塊：
+
+| 動作 | 行為 |
+|---|---|
+| 打開 App info | 自動向 GitHub 查一次最新 Release（結果快取 6 小時，之後再打開不重複查） |
+| `Check for updates` | 手動重查；有新版會顯示版本號與前三行 Release 說明 |
+| `Download vX.Y` | 開啟該 Release 的 `LexiCards.apk` 下載網址：Android 版交給系統瀏覽器下載，網頁版開新分頁 |
+| `Releases page` | 直接開 GitHub Releases 頁（查不到時的備援） |
+
+查詢來源依序為：
+
+1. `https://api.github.com/repos/j77yspv2qt-boop/LexiCards/releases/latest` — 取 tag、說明與 APK 資產網址
+2. `version.json`（repo 根目錄，走 `raw.githubusercontent.com`）— API 被擋或限流時的備援
+
+兩個端點都回傳 `Access-Control-Allow-Origin: *`，瀏覽器與 WebView 都能直接讀；版本比較是逐段數字比較（`1.10 > 1.9`）。比較的是**正在執行的版本**（Android 版讀 APK 的 `versionName`），所以裝完新版本後同一個面板會自動變成 `Up to date`。
+
+啟動時不會主動連線；只有你打開 App info 或按按鈕時才查。
+
+### 5.3 發版流程
+
+版本規則：**每次發佈 +0.1**（1.4 → 1.6），`versionCode` 同步 +1。
+
+```bash
+# 1. 改三處版本號
+#    build/core.js            APP_VERSION = '1.7'
+#    android/AndroidManifest.xml   versionName 1.7 / versionCode 6
+#    version.json             "version": "1.7"
+# 2. 重建並驗證
+cd build && python3 build.py && python3 smoke.py && cd ..
+cd android && python3 build_apk.py && cd ..
+# 3. 提交、推送並發佈（tag 名即 App 顯示的版本）
+git add -A && git commit -m "LexiCards v1.7" && git push
+gh release create v1.7 LexiCards.apk --title "LexiCards v1.7" --notes "..."
+```
+
+Release 的資產檔名固定為 `LexiCards.apk`，App 的更新檢查就是抓這個資產。
 
 ---
 
@@ -270,22 +311,24 @@ python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始�
 | `index.html` | 合併後的單檔應用（可直接執行） |
 | `build/head.html`、`build/body.html` | HTML 骨架與標記 |
 | `build/style1.css`、`build/style2.css` | 樣式（主題 tokens、卡片、拖放面板、Quiz 選項、動畫） |
-| `build/core.js`、`build/core2.js` | 工具函式、localStorage、記錄 CRUD ＋ 滾動備份、繁簡對照表 |
+| `build/core.js`、`build/core2.js` | 工具函式、localStorage、記錄 CRUD ＋ 滾動備份、繁簡對照表（以 code point 建表，見第 9 節） |
 | `build/data_cefr.js`、`data_gloss.js`、`data_examples.js`、`data_extra.js` | **內建詞彙表**（由 `make_data.py` 產生） |
 | `build/offline.js` | 讀取詞彙表、等級池、易混淆干擾項挑選 |
 | `build/seed.js`、`build/seed2.js` | 內建詞庫與洗牌牌堆 |
-| `build/api.js`、`build/api2.js` | 線上查詢與快取 / fallback 流程（結果會補上內建表缺的欄位） |
-| `build/cards.js`、`build/cards2.js` | 卡片渲染、詞義注入、例句詞彙高亮 |
+| `build/api.js`、`build/api2.js` | 線上查詢與快取 / fallback 流程（結果會補上內建表缺的欄位）、例句補丁 |
+| `build/cards.js`、`build/cards2.js` | 卡片渲染、詞義注入、例句詞彙高亮（英文連詞形變、中文連共用片段） |
 | `build/gesture.js`、`build/gesture2.js` | 撥動 / 長按拖放手勢引擎與存檔 |
 | `build/dict.js` | 字典頁（Discover / My Cards、篩選、洗牌、即時查詢） |
 | `build/records.js` | 記錄列表（搜尋、排序、編輯、紅叉刪除） |
 | `build/entry.js` | 新增 / 編輯詞語面板 |
 | `build/quiz.js`、`build/quiz2.js` | 測驗出題與畫面 |
-| `build/data.js` | 設定、匯出 / 匯入、備份還原 |
+| `build/data.js` | 設定、匯出 / 匯入、備份還原、App info 面板 |
+| `build/update.js` | App 內更新檢查（GitHub Release ＋ `version.json` 備援） |
 | `build/nav.js`、`build/init.js` | 頁籤導覽與啟動流程 |
-| `build/smoke*.py`／`build/smoke_*.js` | 100 項功能測試 |
+| `build/smoke*.py`／`build/smoke_*.js` | 123 項功能測試 |
 | `build/shots.py` | 畫面截圖腳本 |
 | `build/make_data.py` | 內建詞彙表的資料管線 |
+| `version.json` | 目前版本與 APK 下載網址（更新檢查的備援來源） |
 | `android/` | 原生 WebView 外殼（Java、res、圖示、打包腳本） |
 
 ### 6.3 詞彙表資料管線
@@ -317,6 +360,7 @@ python3 build/make_data.py                # 約 2–3 分鐘
 5. 範圍測驗至少要有三個不同釋義才能出題，否則該範圍會顯示提示。
 6. 內建例句取自 Tatoeba 語料，自然但非教材句；少數罕見詞以手寫例句補足。
 7. CEFR 分級以 Oxford／字表為準，與其他機構的分級可能略有出入。
+8. 更新檢查需要連得到 GitHub；離線時 App info 會顯示無法連線，可改按 `Releases page` 手動確認。
 
 ---
 
@@ -331,6 +375,21 @@ python3 build/make_data.py                # 約 2–3 分鐘
 | Tatoeba 英文句子 | 例句來源 | CC BY 2.0 FR，引用時需保留出處與授權 |
 
 程式碼部分尚未加入 LICENSE 檔案；如需再利用或散布整個專案，請自行選定並加入合適的授權條款。
+
+---
+
+## 9. 修訂紀錄
+
+### v1.6
+
+| # | 修掉什麼 | 原因 |
+|---|---|---|
+| 1 | **例句高亮**：中文例句也會標出對應的詞；英文例句連詞形變一起比對（`sing` → `singing`、`adopt` → `adopted`、`study` → `studies`） | 中文譯文非同步回填時走的是純文字路徑，高亮被整段蓋掉；比對又只認完全相同的字串，譯文只要換個說法（`唱歌` → `唱這首歌`）就完全對不上 |
+| 2 | **每張卡片都有例句** | 詞義快取命中時只會補中文解釋，不會補例句；早期看過的詞（例如 `ethical`）就永遠缺例句。現在命中時會用內建表補上，內建表沒有才連線抓（Free Dictionary → Wiktionary REST → Wiktionary 原始碼的用例行），你搜尋字詞後新增的卡片同樣會有例句 |
+| 3 | **繁簡轉換錯字**（`權` → `杠`） | 繁簡對照表以字元對串接，但其中有 28 個非 BMP 字（`𣈶` 等）；舊程式以 UTF-16 單位每次跳 2 格，第一個非 BMP 字之後整張表錯位一格，190 組對應損壞（`權`→`杠`、`條`→`来`、`機構`→`杀枞`），內建 5,717 個詞義中有 545 個會顯示錯字。改以 code point 建表，並把舊版已寫進瀏覽器的中文修正回來（自行輸入的釋義不動） |
+| 4 | **App 內更新檢查** | App info 新增 Updates 區塊，向 GitHub Release 查最新版，可直接下載新 APK（見 5.2） |
+
+> 測試：headless Chromium 功能測試由 100 項增加到 **123 項**，第 14 節專門釘住上面四項。
 
 
 

@@ -291,6 +291,16 @@
           <button type="button" class="seg" data-lang="traditional" role="tab">Traditional</button>
           <button type="button" class="seg" data-lang="simplified" role="tab">Simplified</button>
         </div>
+
+        <div class="field" style="margin-top:16px">
+          <span class="field__label">Updates</span>
+          <span class="field__hint" id="updateInfo">Tap &ldquo;Check for updates&rdquo; to look for a newer release on GitHub.</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button type="button" class="btn btn--ghost btn--sm" id="btnCheckUpdate">Check for updates</button>
+          <button type="button" class="btn btn--primary btn--sm" id="btnInstallUpdate" hidden>Download update</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnReleasePage">Releases page</button>
+        </div>
       </div>
       <div class="sheet__foot">
         <button type="button" class="btn btn--primary" data-close="sheetInfo">Done</button>

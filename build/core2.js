@@ -7,15 +7,86 @@ const S2T_PAIRS =
   '谐諧谑謔谒謁谓謂谔諤谕諭谖諼谗讒谘諮谙諳谚諺谛諦谜謎谝諞谞諝谟謨谠讜谡謖谢謝谣謠谤謗谥諡谦謙谧謐谨謹谩謾谪謫谫譾谬謬谭譚谮譖谯譙谰讕谱譜谲譎谳讞谴譴谵譫谶讖豮豶贝貝贞貞负負贠貟贡貢财財责責贤賢败敗账賬货貨质質贩販贪貪贫貧贬貶购購贮貯贯貫贰貳贱賤贲賁贳貰贴貼贵貴贶貺贷貸贸貿费費贺賀贻貽贼賊贽贄贾賈贿賄赀貲赁賃赂賂赃贓资資赅賅赆贐赇賕赈賑赉賚赊賒赋賦赌賭赍齎赎贖赏賞赐賜赑贔赒賙赓賡赔賠赕賧赖賴赗賵赘贅赙賻赚賺赛賽赜賾赝贗赞贊赟贇赠贈赡贍赢贏赣贛赪赬赵趙赶趕趋趨趱趲趸躉跃躍跄蹌跖蹠跞躒践踐跶躂跷蹺跸蹕跹躚跻躋踌躊踪蹤踬躓踯躑蹑躡蹒蹣蹰躕蹿躥躏躪躜躦躯軀輼轀车車轧軋轨軌轩軒轪軑轫軔转轉轭軛轮輪软軟轰轟轱軲轲軻轳轤轴軸轵軹轶軼轷軤轸軫轹轢轺軺轻輕轼軾载載轾輊轿轎辀輈辁輇辂輅较較辄輒辅輔辆輛辇輦辈輩辉輝辊輥辋輞辌輬辍輟辎輜辏輳辐輻辑輯辒轀输輸辔轡辕轅辖轄辗輾辘轆辙轍辚轔辞辭辟闢辩辯辫辮边邊辽遼达達迁遷过過迈邁运運还還这這进進远遠违違连連迟遲迩邇迳逕迹跡适適选選逊遜递遞逦邐逻邏遗遺遥遙邓鄧邝鄺邬鄔邮郵邹鄒邺鄴邻鄰郁鬱郏郟郐鄶郑鄭郓鄆郦酈郧鄖郸鄲酂酇酝醞酦醱酱醬酽釅酾釃酿釀醖醞采採释釋里裏鉴鑑銮鑾錾鏨钅釒钆釓钇釔针針钉釘钊釗钋釙钌釕钍釷钎釺钏釧钐釤钑鈒钒釩钓釣钔鍆钕釹钖鍚钗釵钘鈃钙鈣钚鈈钛鈦钜鉅钝鈍钞鈔钟鍾钠鈉钡鋇钢鋼钣鈑钤鈐钥鑰钦欽钧鈞钨鎢钩鉤钪鈧钫鈁钬鈥钭鈄钮鈕钯鈀钰鈺钱錢钲鉦钳鉗钴鈷钵鉢钶鈳钷鉕钸鈽钹鈸钺鉞钻鑽钼鉬钽鉭钾鉀钿鈿铀鈾铁鐵铂鉑铃鈴铄鑠铅鉛铆鉚铇鉋铈鈰铉鉉铊鉈铋鉍铌鈮铍鈹铎鐸铏鉶铐銬铑銠铒鉺铓鋩铔錏铕銪铖鋮铗鋏铘鋣铙鐃铚銍铛鐺铜銅铝鋁铞銱铟銦铠鎧铡鍘铢銖铣銑铤鋌铥銩铦銛铧鏵铨銓铩鎩铪鉿铫銚铬鉻铭銘铮錚铯銫铰鉸铱銥铲鏟铳銃铴鐋铵銨银銀铷銣铸鑄铹鐒铺鋪铻鋙铼錸铽鋱链鏈铿鏗销銷锁鎖锂鋰锃鋥锄鋤锅鍋锆鋯锇鋨锈鏽锉銼锊鋝锋鋒锌鋅锍鋶锎鐦锏鐧锐銳锑銻锒鋃锓鋟锔鋦锕錒锖錆锗鍺锘鍩错錯锚錨' +
   '锛錛锜錡锝鍀锞錁锟錕锠錩锡錫锢錮锣鑼锤錘锥錐锦錦锧鑕锨鍁锩錈锪鍃锫錇锬錟锭錠键鍵锯鋸锰錳锱錙锲鍥锳鍈锴鍇锵鏘锶鍶锷鍔锸鍤锹鍬锺鍾锻鍛锼鎪锽鍠锾鍰锿鎄镀鍍镁鎂镂鏤镃鎡镄鐨镅鎇镆鏌镇鎮镈鎛镉鎘镊鑷镋钂镌鐫镍鎳镎鎿镏鎦镐鎬镑鎊镒鎰镓鎵镔鑌镕鎔镖鏢镗鏜镘鏝镙鏍镚鏰镛鏞镜鏡镝鏑镞鏃镟鏇镠鏐镡鐔镢钁镣鐐镤鏷镥鑥镦鐓镧鑭镨鐠镩鑹镪鏹镫鐙镬鑊镭鐳镮鐶镯鐲镰鐮镱鐿镲鑔镳鑣镴鑞镵鑱镶鑲长長门門闩閂闪閃闫閆闬閈闭閉问問闯闖闰閏闱闈闲閒闳閎间間闵閔闶閌闷悶闸閘闹鬧闺閨闻聞闼闥闽閩闾閭闿闓阀閥阁閣阂閡阃閫阄鬮阅閱阆閬阇闍阈閾阉閹阊閶阋鬩阌閿阍閽阎閻阏閼阐闡阑闌阒闃阓闠阔闊阕闋阖闔阗闐阘闒阙闕阚闞阛闤队隊阳陽阴陰阵陣阶階际際陆陸陇隴陈陳陉陘陕陝陦隯陧隉陨隕险險随隨隐隱隶隸隽雋难難雇僱雏雛雠讎雳靂雾霧霁霽霉黴霡霢霭靄靓靚靔靝静靜靥靨鞑韃鞒鞽鞯韉鞲韝韦韋韧韌韨韍韩韓韪韙韫韞韬韜韵韻页頁顶頂顷頃顸頇项項顺順须須顼頊顽頑顾顧顿頓颀頎颁頒颂頌颃頏预預颅顱领領颇頗颈頸颉頡颊頰颋頲颌頜颍潁颎熲颏頦颐頤频頻颒頮颓頹颔頷颕頴颖穎颗顆题題颙顒颚顎颛顓颜顏额額颞顳颟顢颠顛颡顙颢顥颣纇颤顫颥顬颦顰颧顴风風飏颺飐颭飑颮飒颯飓颶飔颸飕颼飖颻飗飀飘飄飙飆飚飈飞飛飨饗餍饜饣飠饤飣饥飢饦飥饧餳饨飩饩餼饪飪饫飫饬飭饭飯饮飲饯餞饰飾饱飽饲飼饳飿饴飴饵餌饶饒饷餉饸餄饹餎饺餃饻餏饼餅饽餑饾餖饿餓馀餘馁餒馂餕馃餜馄餛馅餡馆館馇餷馈饋馉餶馊餿馋饞馌饁馍饃馎餺馏餾馐饈馑饉馒饅馓饊馔饌馕饢马馬驭馭驮馱驯馴驰馳驱驅驲馹驳駁驴驢驵駔驶駛驷駟驸駙驹駒驺騶驻駐驼駝驽駑驾駕驿驛骀駘骁驍骂罵骃駰骄驕骅驊骆駱骇駭骈駢骉驫骊驪骋騁验驗骍騂骎駸骏駿骐騏骑騎骒騍骓騅骔騌骕驌骖驂骗騙骘騭骙騤骚騷骛騖骜驁骝騮骞騫骟騸骠驃骡騾骢驄骣驏骤驟骥驥骦驦骧驤髅髏髋髖髌髕鬓鬢鬶鬹魇魘魉魎鱼魚鱽魛鱾魢鱿魷鲀魨鲁魯鲂魴鲃䰾鲄魺鲅鮁鲆鮃鲇鮎鲈鱸鲉鮋鲊鮓鲋鮒鲌鮊鲍鮑鲎鱟鲏鮍鲐鮐鲑鮭鲒鮚鲓鮳鲔鮪' +
   '鲕鮞鲖鮦鲗鰂鲘鮜鲙鱠鲚鱭鲛鮫鲜鮮鲝鮺鲞鯗鲟鱘鲠鯁鲡鱺鲢鰱鲣鰹鲤鯉鲥鰣鲦鰷鲧鯀鲨鯊鲩鯇鲪鮶鲫鯽鲬鯒鲭鯖鲮鯪鲯鯕鲰鯫鲱鯡鲲鯤鲳鯧鲴鯝鲵鯢鲶鯰鲷鯛鲸鯨鲹鰺鲺鯴鲻鯔鲼鱝鲽鰈鲾鰏鲿鱨鳀鯷鳁鰮鳂鰃鳃鰓鳄鱷鳅鰍鳆鰒鳇鰉鳈鰁鳉鱂鳊鯿鳋鰠鳌鰲鳍鰭鳎鰨鳏鰥鳐鰩鳑鰟鳒鰜鳓鰳鳔鰾鳕鱈鳖鱉鳗鰻鳘鰵鳙鱅鳚䲁鳛鰼鳜鱖鳝鱔鳞鱗鳟鱒鳠鱯鳡鱤鳢鱧鳣鱣鳤䲘鸟鳥鸠鳩鸡雞鸢鳶鸣鳴鸤鳲鸥鷗鸦鴉鸧鶬鸨鴇鸩鴆鸪鴣鸫鶇鸬鸕鸭鴨鸮鴞鸯鴦鸰鴒鸱鴟鸲鴝鸳鴛鸴鷽鸵鴕鸶鷥鸷鷙鸸鴯鸹鴰鸺鵂鸻鴴鸼鵃鸽鴿鸾鸞鸿鴻鹀鵐鹁鵓鹂鸝鹃鵑鹄鵠鹅鵝鹆鵒鹇鷳鹈鵜鹉鵡鹊鵲鹋鶓鹌鵪鹍鵾鹎鵯鹏鵬鹐鵮鹑鶉鹒鶊鹓鵷鹔鷫鹕鶘鹖鶡鹗鶚鹘鶻鹙鶖鹚鷀鹛鶥鹜鶩鹝鷊鹞鷂鹟鶲鹠鶹鹡鶺鹢鷁鹣鶼鹤鶴鹥鷖鹦鸚鹧鷓鹨鷚鹩鷯鹪鷦鹫鷲鹬鷸鹭鷺鹮䴉鹯鸇鹰鷹鹱鸌鹲鸏鹳鸛鹴鸘鹾鹺麦麥麸麩麹麴麺麪麽麼黄黃黉黌黡黶黩黷黪黲黾黽鼋黿鼌鼂鼍鼉鼹鼴齐齊齑齏齿齒龀齔龁齕龂齗龃齟龄齡龅齙龆齠龇齜龈齦龉齬龊齪龋齲龌齷龙龍龚龔龛龕龟龜㐷傌㐹㑶㐽偑㑇㑳㑈倲㑔㑯㑩儸㓆𠗣㓥劏㓰劃㔉劚㖊噚㖞喎㘎㘚㚯㜄㛀媰㛟𡞵㛠𡢃㛣㜏㛤孋㛿𡠹㟆㠏㟜𡾱㟥嵾㡎幓㤘㥮㤽懤㥪慺㧏掆㧐㩳㧑撝㧟擓㧰擽㨫㩜㭎棡㭏椲㭣𣙎㭤樢㭴樫㱩殰㱮殨㲿瀇㳔濧㳕灡㳠澾㳡濄㳢𣾷㳽瀰㴋潚㶉鸂㶶燶㶽煱㺍獱㻅璯㻏𤫩㻘𤪺䀥䁻䁖瞜䂵碽䃅磾䅉稏䅟穇䅪𥢢䇲筴䉤籔䌶䊷䌷紬䌸縳䌹絅䌺䋙䌻䋚䌼綐䌽綵䌾䋻䌿䋹䍀繿䍁繸䍠䍦䎬䎱䏝膞䑽𦪙䓓薵䓕薳䓖藭䓨罃䗖螮䘛𧝞䘞𧜗䙊𧜵䙌䙡䙓襬䜣訢䜤鿁䜥𧩙䜧䜀䜩讌䝙貙䞌𧵳䞍䝼䞎𧶧䞐賰䟢躎䢀𨊰䢁𨊸䢂𨋢䥺釾䥽鏺䥾䥱䥿𨯅䦀𨦫䦁𨧜䦂䥇䦃鐯䦅鐥䦆钁䦶䦛䦷䦟䩄靦䭪𩞯䯃𩣑䯄騧䯅䯀䲝䱽䲞𩶘䲟鮣䲠鰆䲡鰌䲢鰧䲣䱷䴓鳾䴔鵁䴕鴷䴖鶄䴗鶪䴘鷉䴙鸊䶮龑';
-const S2T = (function () {
+/* The tables above are plain concatenations of (source, target) character
+   pairs, and a few pairs carry a character outside the BMP (𣈶, 𣯶, ...).  The
+   old builder walked the string two *UTF-16 units* at a time, so the alignment
+   broke at the first such character: every pair after it was read one unit
+   early and a traditional character became a key whose "translation" was the
+   character sitting behind it.  That is what printed 人權 as 人杠 and quietly
+   damaged 190 pairs.  Build the map from code points instead - and walk the
+   maps the same way, so a non-BMP character works on both sides. */
+function pairsToMap(pairs) {
   const map = Object.create(null);
-  const s = S2T_PAIRS;
-  for (let i = 0; i + 1 < s.length; i += 2) if (!map[s[i]]) map[s[i]] = s[i + 1];
+  const cps = Array.from(pairs);
+  for (let i = 0; i + 1 < cps.length; i += 2) if (!map[cps[i]]) map[cps[i]] = cps[i + 1];
   return map;
+}
+
+/* the old, mis-aligned build - kept only to recognise (and repair) the text it
+   already wrote into localStorage */
+function legacyPairsToMap(pairs) {
+  const map = Object.create(null);
+  for (let i = 0; i + 1 < pairs.length; i += 2) if (!map[pairs[i]]) map[pairs[i]] = pairs[i + 1];
+  return map;
+}
+
+const S2T = pairsToMap(S2T_PAIRS);
+const S2T_LEGACY = legacyPairsToMap(S2T_PAIRS);
+
+function mapScript(s, map) {
+  return Array.from(String(s == null ? '' : s)).map(ch => map[ch] || ch).join('');
+}
+function toTrad(s) { return mapScript(s, S2T); }
+
+/* --- one-time repair of the text the broken table already stored ----------
+   A traditional character that the legacy build wrongly used as a key was
+   shown as the character stored behind it, so the inverse of exactly those
+   pairs puts the text back: 杠 -> 權, 来 -> 條, 杀 -> 構, ...  Only values that
+   came from the app itself are repaired - a meaning the user typed by hand is
+   never touched. */
+const SCRIPT_CJK = /[\u3400-\u9FFF\uF900-\uFAFF]/;
+const SCRIPT_REPAIR = (function () {
+  const rep = Object.create(null);
+  Object.keys(S2T_LEGACY).forEach(bad => {
+    if (S2T[bad]) return;                                  /* a real simplified character */
+    const shown = S2T_LEGACY[bad];
+    if (typeof shown !== 'string' || shown.length !== 1 || shown === bad) return;
+    if (!SCRIPT_CJK.test(shown) || rep[shown]) return;
+    rep[shown] = bad;
+  });
+  return rep;
 })();
 
-function toTrad(s) {
-  return String(s == null ? '' : s).replace(/[\s\S]/g, ch => S2T[ch] || ch);
+function repairScript(s) {
+  if (typeof s !== 'string' || !s) return s;
+  return mapScript(s, SCRIPT_REPAIR);
+}
+
+const SCRIPT_FIX_FLAG = 'scriptFix';
+const SCRIPT_FIX_REV = 2;
+
+function repairLegacyScriptData() {
+  if ((state.settings[SCRIPT_FIX_FLAG] || 0) >= SCRIPT_FIX_REV) return false;
+  Object.keys(state.cache).forEach(k => {
+    const entry = state.cache[k];
+    if (!entry || typeof entry !== 'object') return;
+    ['zh', 'defZh', 'exampleZh'].forEach(field => {
+      if (Array.isArray(entry[field])) {
+        entry[field] = entry[field].map(v => repairScript(v));
+      } else if (typeof entry[field] === 'string') {
+        entry[field] = repairScript(entry[field]);
+      }
+    });
+  });
+  state.records.forEach(r => {
+    if (!r || r.source === 'manual') return;               /* hand-typed - leave it alone */
+    if (Array.isArray(r.zh)) r.zh = r.zh.map(v => repairScript(v));
+  });
+  state.settings[SCRIPT_FIX_FLAG] = SCRIPT_FIX_REV;
+  saveCache();
+  saveSettings();
+  saveRecords();
+  return true;
 }
 
 /* ------------- traditional -> simplified (display only: Definition in Chinese) ------------- */
@@ -58,17 +129,8 @@ const T2S_PAIRS =
   '鱣鳣鱤鳡鱧鳢鱨鲿鱭鲚鱯鳠鱷鳄鱸鲈鱺鲡鳥鸟鳧凫鳩鸠鳬凫鳲鸤鳳凤鳴鸣鳶鸢鳾䴓鴆鸩鴇鸨鴉鸦鴒鸰鴕鸵鴛鸳鴝鸲鴞鸮鴟鸱鴣鸪鴦鸯鴨鸭鴯鸸鴰鸹鴴鸻鴷䴕鴻鸿鴿鸽鵁䴔鵂鸺鵃鸼鵐鹀鵑鹃鵒鹆鵓鹁鵜鹈鵝鹅鵠鹄鵡鹉鵪鹌鵬鹏鵮鹐鵯鹎鵰雕鵲鹊鵷鹓鵾鹍鶄䴖鶇鸫鶉鹑鶊鹒鶓鹋鶖鹙鶘鹕鶚鹗鶡鹖鶥鹛鶩鹜鶪䴗鶬鸧鶯莺鶲鹟鶴鹤鶹鹠鶺鹡鶻鹘鶼鹣鶿鹚鷀鹚鷁鹢鷂鹞鷄鸡' +
   '鷉䴘鷊鹝鷓鹧鷖鹥鷗鸥鷙鸷鷚鹨鷥鸶鷦鹪鷫鹔鷯鹩鷲鹫鷳鹇鷴鹇鷸鹬鷹鹰鷺鹭鷽鸴鸂㶉鸇鹯鸊䴙鸌鹱鸏鹲鸕鸬鸘鹴鸚鹦鸛鹳鸝鹂鸞鸾鹵卤鹹咸鹺鹾鹼碱鹽盐麗丽麥麦麩麸麪面麫面麯曲麴曲麵面麼么麽么黃黄黌黉點点黨党黲黪黴霉黶黡黷黩黽黾黿鼋鼂鼌鼉鼍鼕冬鼴鼹齊齐齋斋齎赍齏齑齒齿齔龀齕龁齗龂齙龅齜龇齟龃齠龆齡龄齣出齦龈齧啮齪龊齬龉齲龋齶腭齷龌龍龙' +
   '龎厐龐庞龑䶮龔龚龕龛龜龟鿁䜤鿓鿒';
-const T2S = (function () {
-  const map = Object.create(null);
-  const s = T2S_PAIRS;
-  for (let i = 0; i + 1 < s.length; i += 2) {
-    if (!map[s[i]]) map[s[i]] = s[i + 1];
-  }
-  return map;
-})();
-function toSimp(s) {
-  return String(s == null ? '' : s).replace(/[\s\S]/g, ch => T2S[ch] || ch);
-}
+const T2S = pairsToMap(T2S_PAIRS);
+function toSimp(s) { return mapScript(s, T2S); }
 /* display helper: honours the Traditional / Simplified choice in App info.
    Data arrives in both scripts (the bundled table, the APIs, and whatever the
    user typed), so convert to the one that was chosen - the maps are character
@@ -121,6 +183,10 @@ function loadAll() {
     }
   }
   state.records.forEach(r => { if (!r.stats) r.stats = { seen:0, correct:0, wrong:0, streak:0, lastReviewedAt:0 }; });
+
+  /* Chinese text written by the old, mis-aligned conversion table (see the
+     S2T pairs above) is put back before anything is displayed */
+  repairLegacyScriptData();
 }
 
 /* ------------------------------ records backup ------------------------------ */

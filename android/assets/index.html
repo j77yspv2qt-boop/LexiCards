@@ -698,6 +698,16 @@ body[data-revsub="records"] .fab{display:grid}
           <button type="button" class="seg" data-lang="traditional" role="tab">Traditional</button>
           <button type="button" class="seg" data-lang="simplified" role="tab">Simplified</button>
         </div>
+
+        <div class="field" style="margin-top:16px">
+          <span class="field__label">Updates</span>
+          <span class="field__hint" id="updateInfo">Tap &ldquo;Check for updates&rdquo; to look for a newer release on GitHub.</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          <button type="button" class="btn btn--ghost btn--sm" id="btnCheckUpdate">Check for updates</button>
+          <button type="button" class="btn btn--primary btn--sm" id="btnInstallUpdate" hidden>Download update</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnReleasePage">Releases page</button>
+        </div>
       </div>
       <div class="sheet__foot">
         <button type="button" class="btn btn--primary" data-close="sheetInfo">Done</button>
@@ -730,7 +740,7 @@ const LS_KEYS = {
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '1.4';
+const APP_VERSION = '1.6';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */
@@ -900,15 +910,86 @@ const S2T_PAIRS =
   '谐諧谑謔谒謁谓謂谔諤谕諭谖諼谗讒谘諮谙諳谚諺谛諦谜謎谝諞谞諝谟謨谠讜谡謖谢謝谣謠谤謗谥諡谦謙谧謐谨謹谩謾谪謫谫譾谬謬谭譚谮譖谯譙谰讕谱譜谲譎谳讞谴譴谵譫谶讖豮豶贝貝贞貞负負贠貟贡貢财財责責贤賢败敗账賬货貨质質贩販贪貪贫貧贬貶购購贮貯贯貫贰貳贱賤贲賁贳貰贴貼贵貴贶貺贷貸贸貿费費贺賀贻貽贼賊贽贄贾賈贿賄赀貲赁賃赂賂赃贓资資赅賅赆贐赇賕赈賑赉賚赊賒赋賦赌賭赍齎赎贖赏賞赐賜赑贔赒賙赓賡赔賠赕賧赖賴赗賵赘贅赙賻赚賺赛賽赜賾赝贗赞贊赟贇赠贈赡贍赢贏赣贛赪赬赵趙赶趕趋趨趱趲趸躉跃躍跄蹌跖蹠跞躒践踐跶躂跷蹺跸蹕跹躚跻躋踌躊踪蹤踬躓踯躑蹑躡蹒蹣蹰躕蹿躥躏躪躜躦躯軀輼轀车車轧軋轨軌轩軒轪軑轫軔转轉轭軛轮輪软軟轰轟轱軲轲軻轳轤轴軸轵軹轶軼轷軤轸軫轹轢轺軺轻輕轼軾载載轾輊轿轎辀輈辁輇辂輅较較辄輒辅輔辆輛辇輦辈輩辉輝辊輥辋輞辌輬辍輟辎輜辏輳辐輻辑輯辒轀输輸辔轡辕轅辖轄辗輾辘轆辙轍辚轔辞辭辟闢辩辯辫辮边邊辽遼达達迁遷过過迈邁运運还還这這进進远遠违違连連迟遲迩邇迳逕迹跡适適选選逊遜递遞逦邐逻邏遗遺遥遙邓鄧邝鄺邬鄔邮郵邹鄒邺鄴邻鄰郁鬱郏郟郐鄶郑鄭郓鄆郦酈郧鄖郸鄲酂酇酝醞酦醱酱醬酽釅酾釃酿釀醖醞采採释釋里裏鉴鑑銮鑾錾鏨钅釒钆釓钇釔针針钉釘钊釗钋釙钌釕钍釷钎釺钏釧钐釤钑鈒钒釩钓釣钔鍆钕釹钖鍚钗釵钘鈃钙鈣钚鈈钛鈦钜鉅钝鈍钞鈔钟鍾钠鈉钡鋇钢鋼钣鈑钤鈐钥鑰钦欽钧鈞钨鎢钩鉤钪鈧钫鈁钬鈥钭鈄钮鈕钯鈀钰鈺钱錢钲鉦钳鉗钴鈷钵鉢钶鈳钷鉕钸鈽钹鈸钺鉞钻鑽钼鉬钽鉭钾鉀钿鈿铀鈾铁鐵铂鉑铃鈴铄鑠铅鉛铆鉚铇鉋铈鈰铉鉉铊鉈铋鉍铌鈮铍鈹铎鐸铏鉶铐銬铑銠铒鉺铓鋩铔錏铕銪铖鋮铗鋏铘鋣铙鐃铚銍铛鐺铜銅铝鋁铞銱铟銦铠鎧铡鍘铢銖铣銑铤鋌铥銩铦銛铧鏵铨銓铩鎩铪鉿铫銚铬鉻铭銘铮錚铯銫铰鉸铱銥铲鏟铳銃铴鐋铵銨银銀铷銣铸鑄铹鐒铺鋪铻鋙铼錸铽鋱链鏈铿鏗销銷锁鎖锂鋰锃鋥锄鋤锅鍋锆鋯锇鋨锈鏽锉銼锊鋝锋鋒锌鋅锍鋶锎鐦锏鐧锐銳锑銻锒鋃锓鋟锔鋦锕錒锖錆锗鍺锘鍩错錯锚錨' +
   '锛錛锜錡锝鍀锞錁锟錕锠錩锡錫锢錮锣鑼锤錘锥錐锦錦锧鑕锨鍁锩錈锪鍃锫錇锬錟锭錠键鍵锯鋸锰錳锱錙锲鍥锳鍈锴鍇锵鏘锶鍶锷鍔锸鍤锹鍬锺鍾锻鍛锼鎪锽鍠锾鍰锿鎄镀鍍镁鎂镂鏤镃鎡镄鐨镅鎇镆鏌镇鎮镈鎛镉鎘镊鑷镋钂镌鐫镍鎳镎鎿镏鎦镐鎬镑鎊镒鎰镓鎵镔鑌镕鎔镖鏢镗鏜镘鏝镙鏍镚鏰镛鏞镜鏡镝鏑镞鏃镟鏇镠鏐镡鐔镢钁镣鐐镤鏷镥鑥镦鐓镧鑭镨鐠镩鑹镪鏹镫鐙镬鑊镭鐳镮鐶镯鐲镰鐮镱鐿镲鑔镳鑣镴鑞镵鑱镶鑲长長门門闩閂闪閃闫閆闬閈闭閉问問闯闖闰閏闱闈闲閒闳閎间間闵閔闶閌闷悶闸閘闹鬧闺閨闻聞闼闥闽閩闾閭闿闓阀閥阁閣阂閡阃閫阄鬮阅閱阆閬阇闍阈閾阉閹阊閶阋鬩阌閿阍閽阎閻阏閼阐闡阑闌阒闃阓闠阔闊阕闋阖闔阗闐阘闒阙闕阚闞阛闤队隊阳陽阴陰阵陣阶階际際陆陸陇隴陈陳陉陘陕陝陦隯陧隉陨隕险險随隨隐隱隶隸隽雋难難雇僱雏雛雠讎雳靂雾霧霁霽霉黴霡霢霭靄靓靚靔靝静靜靥靨鞑韃鞒鞽鞯韉鞲韝韦韋韧韌韨韍韩韓韪韙韫韞韬韜韵韻页頁顶頂顷頃顸頇项項顺順须須顼頊顽頑顾顧顿頓颀頎颁頒颂頌颃頏预預颅顱领領颇頗颈頸颉頡颊頰颋頲颌頜颍潁颎熲颏頦颐頤频頻颒頮颓頹颔頷颕頴颖穎颗顆题題颙顒颚顎颛顓颜顏额額颞顳颟顢颠顛颡顙颢顥颣纇颤顫颥顬颦顰颧顴风風飏颺飐颭飑颮飒颯飓颶飔颸飕颼飖颻飗飀飘飄飙飆飚飈飞飛飨饗餍饜饣飠饤飣饥飢饦飥饧餳饨飩饩餼饪飪饫飫饬飭饭飯饮飲饯餞饰飾饱飽饲飼饳飿饴飴饵餌饶饒饷餉饸餄饹餎饺餃饻餏饼餅饽餑饾餖饿餓馀餘馁餒馂餕馃餜馄餛馅餡馆館馇餷馈饋馉餶馊餿馋饞馌饁馍饃馎餺馏餾馐饈馑饉馒饅馓饊馔饌馕饢马馬驭馭驮馱驯馴驰馳驱驅驲馹驳駁驴驢驵駔驶駛驷駟驸駙驹駒驺騶驻駐驼駝驽駑驾駕驿驛骀駘骁驍骂罵骃駰骄驕骅驊骆駱骇駭骈駢骉驫骊驪骋騁验驗骍騂骎駸骏駿骐騏骑騎骒騍骓騅骔騌骕驌骖驂骗騙骘騭骙騤骚騷骛騖骜驁骝騮骞騫骟騸骠驃骡騾骢驄骣驏骤驟骥驥骦驦骧驤髅髏髋髖髌髕鬓鬢鬶鬹魇魘魉魎鱼魚鱽魛鱾魢鱿魷鲀魨鲁魯鲂魴鲃䰾鲄魺鲅鮁鲆鮃鲇鮎鲈鱸鲉鮋鲊鮓鲋鮒鲌鮊鲍鮑鲎鱟鲏鮍鲐鮐鲑鮭鲒鮚鲓鮳鲔鮪' +
   '鲕鮞鲖鮦鲗鰂鲘鮜鲙鱠鲚鱭鲛鮫鲜鮮鲝鮺鲞鯗鲟鱘鲠鯁鲡鱺鲢鰱鲣鰹鲤鯉鲥鰣鲦鰷鲧鯀鲨鯊鲩鯇鲪鮶鲫鯽鲬鯒鲭鯖鲮鯪鲯鯕鲰鯫鲱鯡鲲鯤鲳鯧鲴鯝鲵鯢鲶鯰鲷鯛鲸鯨鲹鰺鲺鯴鲻鯔鲼鱝鲽鰈鲾鰏鲿鱨鳀鯷鳁鰮鳂鰃鳃鰓鳄鱷鳅鰍鳆鰒鳇鰉鳈鰁鳉鱂鳊鯿鳋鰠鳌鰲鳍鰭鳎鰨鳏鰥鳐鰩鳑鰟鳒鰜鳓鰳鳔鰾鳕鱈鳖鱉鳗鰻鳘鰵鳙鱅鳚䲁鳛鰼鳜鱖鳝鱔鳞鱗鳟鱒鳠鱯鳡鱤鳢鱧鳣鱣鳤䲘鸟鳥鸠鳩鸡雞鸢鳶鸣鳴鸤鳲鸥鷗鸦鴉鸧鶬鸨鴇鸩鴆鸪鴣鸫鶇鸬鸕鸭鴨鸮鴞鸯鴦鸰鴒鸱鴟鸲鴝鸳鴛鸴鷽鸵鴕鸶鷥鸷鷙鸸鴯鸹鴰鸺鵂鸻鴴鸼鵃鸽鴿鸾鸞鸿鴻鹀鵐鹁鵓鹂鸝鹃鵑鹄鵠鹅鵝鹆鵒鹇鷳鹈鵜鹉鵡鹊鵲鹋鶓鹌鵪鹍鵾鹎鵯鹏鵬鹐鵮鹑鶉鹒鶊鹓鵷鹔鷫鹕鶘鹖鶡鹗鶚鹘鶻鹙鶖鹚鷀鹛鶥鹜鶩鹝鷊鹞鷂鹟鶲鹠鶹鹡鶺鹢鷁鹣鶼鹤鶴鹥鷖鹦鸚鹧鷓鹨鷚鹩鷯鹪鷦鹫鷲鹬鷸鹭鷺鹮䴉鹯鸇鹰鷹鹱鸌鹲鸏鹳鸛鹴鸘鹾鹺麦麥麸麩麹麴麺麪麽麼黄黃黉黌黡黶黩黷黪黲黾黽鼋黿鼌鼂鼍鼉鼹鼴齐齊齑齏齿齒龀齔龁齕龂齗龃齟龄齡龅齙龆齠龇齜龈齦龉齬龊齪龋齲龌齷龙龍龚龔龛龕龟龜㐷傌㐹㑶㐽偑㑇㑳㑈倲㑔㑯㑩儸㓆𠗣㓥劏㓰劃㔉劚㖊噚㖞喎㘎㘚㚯㜄㛀媰㛟𡞵㛠𡢃㛣㜏㛤孋㛿𡠹㟆㠏㟜𡾱㟥嵾㡎幓㤘㥮㤽懤㥪慺㧏掆㧐㩳㧑撝㧟擓㧰擽㨫㩜㭎棡㭏椲㭣𣙎㭤樢㭴樫㱩殰㱮殨㲿瀇㳔濧㳕灡㳠澾㳡濄㳢𣾷㳽瀰㴋潚㶉鸂㶶燶㶽煱㺍獱㻅璯㻏𤫩㻘𤪺䀥䁻䁖瞜䂵碽䃅磾䅉稏䅟穇䅪𥢢䇲筴䉤籔䌶䊷䌷紬䌸縳䌹絅䌺䋙䌻䋚䌼綐䌽綵䌾䋻䌿䋹䍀繿䍁繸䍠䍦䎬䎱䏝膞䑽𦪙䓓薵䓕薳䓖藭䓨罃䗖螮䘛𧝞䘞𧜗䙊𧜵䙌䙡䙓襬䜣訢䜤鿁䜥𧩙䜧䜀䜩讌䝙貙䞌𧵳䞍䝼䞎𧶧䞐賰䟢躎䢀𨊰䢁𨊸䢂𨋢䥺釾䥽鏺䥾䥱䥿𨯅䦀𨦫䦁𨧜䦂䥇䦃鐯䦅鐥䦆钁䦶䦛䦷䦟䩄靦䭪𩞯䯃𩣑䯄騧䯅䯀䲝䱽䲞𩶘䲟鮣䲠鰆䲡鰌䲢鰧䲣䱷䴓鳾䴔鵁䴕鴷䴖鶄䴗鶪䴘鷉䴙鸊䶮龑';
-const S2T = (function () {
+/* The tables above are plain concatenations of (source, target) character
+   pairs, and a few pairs carry a character outside the BMP (𣈶, 𣯶, ...).  The
+   old builder walked the string two *UTF-16 units* at a time, so the alignment
+   broke at the first such character: every pair after it was read one unit
+   early and a traditional character became a key whose "translation" was the
+   character sitting behind it.  That is what printed 人權 as 人杠 and quietly
+   damaged 190 pairs.  Build the map from code points instead - and walk the
+   maps the same way, so a non-BMP character works on both sides. */
+function pairsToMap(pairs) {
   const map = Object.create(null);
-  const s = S2T_PAIRS;
-  for (let i = 0; i + 1 < s.length; i += 2) if (!map[s[i]]) map[s[i]] = s[i + 1];
+  const cps = Array.from(pairs);
+  for (let i = 0; i + 1 < cps.length; i += 2) if (!map[cps[i]]) map[cps[i]] = cps[i + 1];
   return map;
+}
+
+/* the old, mis-aligned build - kept only to recognise (and repair) the text it
+   already wrote into localStorage */
+function legacyPairsToMap(pairs) {
+  const map = Object.create(null);
+  for (let i = 0; i + 1 < pairs.length; i += 2) if (!map[pairs[i]]) map[pairs[i]] = pairs[i + 1];
+  return map;
+}
+
+const S2T = pairsToMap(S2T_PAIRS);
+const S2T_LEGACY = legacyPairsToMap(S2T_PAIRS);
+
+function mapScript(s, map) {
+  return Array.from(String(s == null ? '' : s)).map(ch => map[ch] || ch).join('');
+}
+function toTrad(s) { return mapScript(s, S2T); }
+
+/* --- one-time repair of the text the broken table already stored ----------
+   A traditional character that the legacy build wrongly used as a key was
+   shown as the character stored behind it, so the inverse of exactly those
+   pairs puts the text back: 杠 -> 權, 来 -> 條, 杀 -> 構, ...  Only values that
+   came from the app itself are repaired - a meaning the user typed by hand is
+   never touched. */
+const SCRIPT_CJK = /[\u3400-\u9FFF\uF900-\uFAFF]/;
+const SCRIPT_REPAIR = (function () {
+  const rep = Object.create(null);
+  Object.keys(S2T_LEGACY).forEach(bad => {
+    if (S2T[bad]) return;                                  /* a real simplified character */
+    const shown = S2T_LEGACY[bad];
+    if (typeof shown !== 'string' || shown.length !== 1 || shown === bad) return;
+    if (!SCRIPT_CJK.test(shown) || rep[shown]) return;
+    rep[shown] = bad;
+  });
+  return rep;
 })();
 
-function toTrad(s) {
-  return String(s == null ? '' : s).replace(/[\s\S]/g, ch => S2T[ch] || ch);
+function repairScript(s) {
+  if (typeof s !== 'string' || !s) return s;
+  return mapScript(s, SCRIPT_REPAIR);
+}
+
+const SCRIPT_FIX_FLAG = 'scriptFix';
+const SCRIPT_FIX_REV = 2;
+
+function repairLegacyScriptData() {
+  if ((state.settings[SCRIPT_FIX_FLAG] || 0) >= SCRIPT_FIX_REV) return false;
+  Object.keys(state.cache).forEach(k => {
+    const entry = state.cache[k];
+    if (!entry || typeof entry !== 'object') return;
+    ['zh', 'defZh', 'exampleZh'].forEach(field => {
+      if (Array.isArray(entry[field])) {
+        entry[field] = entry[field].map(v => repairScript(v));
+      } else if (typeof entry[field] === 'string') {
+        entry[field] = repairScript(entry[field]);
+      }
+    });
+  });
+  state.records.forEach(r => {
+    if (!r || r.source === 'manual') return;               /* hand-typed - leave it alone */
+    if (Array.isArray(r.zh)) r.zh = r.zh.map(v => repairScript(v));
+  });
+  state.settings[SCRIPT_FIX_FLAG] = SCRIPT_FIX_REV;
+  saveCache();
+  saveSettings();
+  saveRecords();
+  return true;
 }
 
 /* ------------- traditional -> simplified (display only: Definition in Chinese) ------------- */
@@ -951,17 +1032,8 @@ const T2S_PAIRS =
   '鱣鳣鱤鳡鱧鳢鱨鲿鱭鲚鱯鳠鱷鳄鱸鲈鱺鲡鳥鸟鳧凫鳩鸠鳬凫鳲鸤鳳凤鳴鸣鳶鸢鳾䴓鴆鸩鴇鸨鴉鸦鴒鸰鴕鸵鴛鸳鴝鸲鴞鸮鴟鸱鴣鸪鴦鸯鴨鸭鴯鸸鴰鸹鴴鸻鴷䴕鴻鸿鴿鸽鵁䴔鵂鸺鵃鸼鵐鹀鵑鹃鵒鹆鵓鹁鵜鹈鵝鹅鵠鹄鵡鹉鵪鹌鵬鹏鵮鹐鵯鹎鵰雕鵲鹊鵷鹓鵾鹍鶄䴖鶇鸫鶉鹑鶊鹒鶓鹋鶖鹙鶘鹕鶚鹗鶡鹖鶥鹛鶩鹜鶪䴗鶬鸧鶯莺鶲鹟鶴鹤鶹鹠鶺鹡鶻鹘鶼鹣鶿鹚鷀鹚鷁鹢鷂鹞鷄鸡' +
   '鷉䴘鷊鹝鷓鹧鷖鹥鷗鸥鷙鸷鷚鹨鷥鸶鷦鹪鷫鹔鷯鹩鷲鹫鷳鹇鷴鹇鷸鹬鷹鹰鷺鹭鷽鸴鸂㶉鸇鹯鸊䴙鸌鹱鸏鹲鸕鸬鸘鹴鸚鹦鸛鹳鸝鹂鸞鸾鹵卤鹹咸鹺鹾鹼碱鹽盐麗丽麥麦麩麸麪面麫面麯曲麴曲麵面麼么麽么黃黄黌黉點点黨党黲黪黴霉黶黡黷黩黽黾黿鼋鼂鼌鼉鼍鼕冬鼴鼹齊齐齋斋齎赍齏齑齒齿齔龀齕龁齗龂齙龅齜龇齟龃齠龆齡龄齣出齦龈齧啮齪龊齬龉齲龋齶腭齷龌龍龙' +
   '龎厐龐庞龑䶮龔龚龕龛龜龟鿁䜤鿓鿒';
-const T2S = (function () {
-  const map = Object.create(null);
-  const s = T2S_PAIRS;
-  for (let i = 0; i + 1 < s.length; i += 2) {
-    if (!map[s[i]]) map[s[i]] = s[i + 1];
-  }
-  return map;
-})();
-function toSimp(s) {
-  return String(s == null ? '' : s).replace(/[\s\S]/g, ch => T2S[ch] || ch);
-}
+const T2S = pairsToMap(T2S_PAIRS);
+function toSimp(s) { return mapScript(s, T2S); }
 /* display helper: honours the Traditional / Simplified choice in App info.
    Data arrives in both scripts (the bundled table, the APIs, and whatever the
    user typed), so convert to the one that was chosen - the maps are character
@@ -1014,6 +1086,10 @@ function loadAll() {
     }
   }
   state.records.forEach(r => { if (!r.stats) r.stats = { seen:0, correct:0, wrong:0, streak:0, lastReviewedAt:0 }; });
+
+  /* Chinese text written by the old, mis-aligned conversion table (see the
+     S2T pairs above) is put back before anything is displayed */
+  repairLegacyScriptData();
 }
 
 /* ------------------------------ records backup ------------------------------ */
@@ -1893,6 +1969,79 @@ function lookupDatamuse(term) {
   });
 }
 
+/* ---- 4) example sentence only: wikitext usage lines of a Wiktionary entry ----
+   The Free Dictionary API and the Wiktionary REST endpoint carry an example for
+   many words, but not for all of them, and for a phrase they carry none at all
+   - a searched phrase then stayed without a sentence.  The action API returns
+   the raw entry, whose "#:" usage lines are real corpus sentences and exist for
+   multi-word entries too. */
+function cleanWikiText(s) {
+  return stripHTML(String(s)
+    .replace(/\{\{[^{}]*\}\}/g, ' ')                  /* templates */
+    .replace(/\[\[([^\]|]*\|)?([^\]]*)\]\]/g, '$2')   /* links keep their label */
+    .replace(/''+/g, '')                              /* bold / italic markup */
+    .replace(/<[^>]+>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function lookupWiktionaryText(term) {
+  const url = 'https://en.wiktionary.org/w/api.php?action=parse&prop=wikitext&format=json&origin=*' +
+    '&redirects=1&page=' + encodeURIComponent(term);
+  return fetchJSON(url, API_TIMEOUT).then(data => {
+    const wt = data && data.parse && data.parse.wikitext && data.parse.wikitext['*'];
+    if (!wt) throw new Error('no entry');
+    const out = [];
+    String(wt).split('\n').forEach(line => {
+      if (line.indexOf('#:') !== 0 && line.indexOf('#*') !== 0) return;
+      const text = cleanWikiText(line.replace(/^#[:*]\s*/, ''));
+      if (text.length >= 8 && text.length <= 170) out.push(text);
+    });
+    if (!out.length) throw new Error('no example');
+    return out;
+  });
+}
+
+/* a sentence that actually contains the term is worth much more than one that
+   does not - the highlight is the point of showing the example */
+function sentenceHasTerm(sentence, term) {
+  return markHits(sentence, term).indexOf('ex-hit') >= 0;
+}
+function pickSentence(candidates, term) {
+  const list = candidates.map(s => String(s || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  for (let i = 0; i < list.length; i++) if (sentenceHasTerm(list[i], term)) return list[i];
+  return list[0] || '';
+}
+
+const EXAMPLE_CHAIN = [
+  { id: 'dictionaryapi',       label: 'Dictionary API', fn: lookupFreeDictionary },
+  { id: 'wiktionary',          label: 'Wiktionary',     fn: lookupWiktionary },
+  { id: 'wiktionary-wikitext', label: 'Wiktionary',     fn: lookupWiktionaryText }
+];
+
+/* one example sentence for `term`, from whichever source has one; used for a
+   word or phrase the bundled table does not carry (that is: a searched term) */
+function fetchExampleSentence(term, type) {
+  let chain = Promise.reject(new Error('no example available'));
+  EXAMPLE_CHAIN.forEach(p => {
+    if (providerIsDown(p.id)) return;
+    chain = chain.catch(() => {
+      const at = Date.now();
+      return p.fn(term).then(res => {
+        noteProviderResult(p.id, true, Date.now() - at);
+        const list = Array.isArray(res) ? res : (res && res.example ? [res.example] : []);
+        const sentence = pickSentence(list, term);
+        if (!sentence) throw new Error('no example');
+        return sentence;
+      }, err => {
+        noteProviderResult(p.id, false, Date.now() - at);
+        throw err;
+      });
+    });
+  });
+  return chain;
+}
+
 /* ---- Traditional Chinese translation (en -> zh-TW) ---- */
 function translateToZh(text) {
   const url = 'https://api.mymemory.translated.net/get?q=' +
@@ -2078,6 +2227,7 @@ function translateCached(text) {
 /* ------------------- cache + orchestrator: getMeaning() ------------------- */
 const INFLIGHT = new Map();
 const PATCHES = new Map();                 /* meaningKey -> promise of the bilingual step */
+const EX_PATCHES = new Map();              /* meaningKey -> promise of the example step */
 const MEANING_PATCH_LISTENERS = [];
 
 /* the card layer subscribes here to fill in the "Definition in Chinese" block
@@ -2178,6 +2328,37 @@ function startBilingualPatch(key, out) {
   return patch;
 }
 
+/* ---- the example sentence is healed the same way as the translation --------
+   A card is supposed to show an example, but an entry cached before the
+   bundled example table existed (or a searched word the table does not know)
+   has none: the English API does not always return one.  Fill it from the
+   bundled table when possible, otherwise fetch a sentence, and repaint the
+   card when it lands. */
+function startExamplePatch(key, out) {
+  if (EX_PATCHES.has(key)) return EX_PATCHES.get(key);
+  const job = (function () {
+    if (out.example) return Promise.resolve(out);
+    const bundled = offlineExample(out.term);
+    if (bundled) { out.example = bundled; return Promise.resolve(out); }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return Promise.resolve(out);
+    return fetchExampleSentence(out.term, out.type || 'word').then(sentence => {
+      if (sentence && !out.example) out.example = sentence;
+      return out;
+    }, () => out);
+  })().then(res => {
+    state.cache[key] = res;
+    saveCacheSoon();
+    notifyMeaningPatch(res);
+    EX_PATCHES.delete(key);
+    return res;
+  }, err => {
+    EX_PATCHES.delete(key);
+    throw err;
+  });
+  EX_PATCHES.set(key, job);
+  return job;
+}
+
 function getMeaning(term, type, force) {
   const key = meaningKey(term, type);
   if (!force) {
@@ -2193,6 +2374,11 @@ function getMeaning(term, type, force) {
         hit.patchTries = (hit.patchTries || 0) + 1;
         startBilingualPatch(key, hit);
       }
+      /* self-heal: an entry without an example gets one (see startExamplePatch) */
+      if (!hit.example && !EX_PATCHES.has(key) && (hit.exampleTries || 0) < 3) {
+        hit.exampleTries = (hit.exampleTries || 0) + 1;
+        startExamplePatch(key, hit);
+      }
       return Promise.resolve(hit);
     }
     if (INFLIGHT.has(key)) return INFLIGHT.get(key);
@@ -2200,7 +2386,7 @@ function getMeaning(term, type, force) {
 
   const job = (async function () {
     const out = {
-      term: term, en: [], zh: [], defZh: [], phonetic: '', audio: '',
+      term: term, type: type || 'word', en: [], zh: [], defZh: [], phonetic: '', audio: '',
       example: '', exampleZh: '',
       source: 'none', ok: false, note: '', fetchedAt: Date.now()
     };
@@ -2257,6 +2443,9 @@ function getMeaning(term, type, force) {
        Deliberately not awaited: the card is already readable, and this block
        pops in as soon as the translation answers. */
     startBilingualPatch(key, out);
+    /* ---- and the example sentence: nothing to do when the entry already has
+       one, otherwise a sentence is fetched and the card picks it up late ---- */
+    if (!out.example) startExamplePatch(key, out);
 
     return out;
   })();
@@ -2344,6 +2533,22 @@ function skeletonsHTML() {
    words must match on a word boundary - "an" never lights up inside "and" -
    and a pattern like "the more ..., the more ..." is highlighted piece by
    piece, since the dots never appear in the sentence. */
+/* a corpus sentence rarely repeats the headword exactly (adopt -> adopted,
+   study -> studies, sing -> singing); without the inflections the example of
+   such a word never lights up at all */
+function wordForms(word) {
+  const w = String(word || '').toLowerCase();
+  if (!/^[a-z]+$/.test(w)) return [];
+  const out = [];
+  const add = f => { if (f && f !== w && out.indexOf(f) < 0) out.push(f); };
+  add(w + 's'); add(w + 'es'); add(w + 'ed'); add(w + 'd'); add(w + 'ing');
+  add(w + 'ly'); add(w + 'er'); add(w + 'est');
+  if (/e$/.test(w)) { add(w.slice(0, -1) + 'ing'); add(w.slice(0, -1) + 'ed'); }
+  if (/y$/.test(w)) { add(w.slice(0, -1) + 'ies'); add(w.slice(0, -1) + 'ied'); add(w.slice(0, -1) + 'ier'); add(w.slice(0, -1) + 'iest'); }
+  if (/[^aeiou][aeiou][^aeiouwxy]$/.test(w)) { const c = w[w.length - 1]; add(w + c + 'ed'); add(w + c + 'ing'); }
+  return out;
+}
+
 function markHits(text, needle) {
   const t = String(text || '');
   const raw = String(needle || '').replace(/^[a-z]+\.\s*/i, '').trim();
@@ -2354,10 +2559,9 @@ function markHits(text, needle) {
     : [raw];
   const lo = t.toLowerCase();
   const hits = [];
-  needles.forEach(n => {
+  function collect(n, whole) {
     const ln = n.toLowerCase();
     if (!ln) return;
-    const whole = /^[a-z]+$/i.test(n);
     let from = 0, at;
     while ((at = lo.indexOf(ln, from)) >= 0) {
       const before = at > 0 ? t[at - 1] : '';
@@ -2365,7 +2569,12 @@ function markHits(text, needle) {
       if (!whole || (!/[a-z]/i.test(before) && !/[a-z]/i.test(after))) hits.push([at, ln.length]);
       from = at + 1;
     }
-  });
+  }
+  needles.forEach(n => collect(n, /^[a-z]+$/i.test(n)));
+  /* second pass: an inflected form of a single-word headword */
+  if (!hits.length && needles.length === 1 && /^[a-z]+$/i.test(raw) && raw.length >= 3) {
+    wordForms(raw).forEach(f => collect(f, true));
+  }
   if (!hits.length) return escapeHTML(t);
 
   hits.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
@@ -2377,6 +2586,56 @@ function markHits(text, needle) {
     at = h[0] + h[1];
   });
   return out + escapeHTML(t.slice(at));
+}
+
+/* ---------------------- Chinese side of the example ----------------------
+   The translation is machine-made, so it seldom repeats the glossary wording:
+   the gloss of "sing" is 唱歌 while the sentence reads 唱這首歌.  Searching for
+   the gloss verbatim therefore misses most of the time and the Chinese line
+   shows no highlight at all.  Try the senses one by one, then mark the longest
+   run the sentence and a sense really share. */
+function zhSenses(gloss) {
+  return String(gloss == null ? '' : gloss)
+    .split(/[\/、；;，,（）()【】\[\]]|\s+/)
+    .map(s => s.replace(/^[a-z]+\.\s*/i, '').trim())
+    .filter(s => /[\u3400-\u9FFF\uF900-\uFAFF]/.test(s));
+}
+
+function longestSharedRun(text, sense) {
+  const a = String(text || ''), b = String(sense || '');
+  let best = null;
+  for (let i = 0; i < a.length; i++) {
+    for (let j = 0; j < b.length; j++) {
+      let n = 0;
+      while (i + n < a.length && j + n < b.length && a[i + n] === b[j + n]) n++;
+      if (n > 0 && (!best || n > best.len)) best = { at: i, len: n, whole: n === b.length };
+    }
+  }
+  return best;
+}
+
+function markZhHits(text, gloss) {
+  const t = String(text == null ? '' : text);
+  if (!t) return '';
+  const senses = zhSenses(gloss);
+  for (let i = 0; i < senses.length; i++) {
+    const marked = markHits(t, senses[i]);
+    if (marked.indexOf('ex-hit') >= 0) return marked;
+  }
+  /* no sense appears as it stands: mark the longest stretch a sense and the
+     sentence really share.  A single character is enough for a short gloss
+     (唱歌 -> 唱這首歌), two are required for a longer one, so a stray 的 or 是
+     never lights up. */
+  let best = null;
+  senses.forEach(s => {
+    const run = longestSharedRun(t, s);
+    if (!run || run.len < (s.length <= 2 ? 1 : 2)) return;
+    if (!best || run.len > best.len) best = run;
+  });
+  if (!best) return escapeHTML(t);
+  return escapeHTML(t.slice(0, best.at)) +
+    '<b class="ex-hit">' + escapeHTML(t.substr(best.at, best.len)) + '</b>' +
+    escapeHTML(t.slice(best.at + best.len));
 }
 
 function meaningBlocksHTML(m, type, opts) {
@@ -2430,7 +2689,7 @@ function meaningBlocksHTML(m, type, opts) {
     html += '<div class="defblock defblock--example" data-example>' +
       '<div class="defblock__label defblock__label--en">Example Sentence</div>' +
       '<div class="card__example">' + markHits(m.example, m.term) + '</div>' +
-      (m.exampleZh ? '<div class="card__example-zh">' + markHits(displayZh(m.exampleZh), gloss) + '</div>' : '') +
+      (m.exampleZh ? '<div class="card__example-zh">' + markZhHits(displayZh(m.exampleZh), displayZh(gloss)) + '</div>' : '') +
       '</div>';
   }
   return html;
@@ -2597,7 +2856,23 @@ function applyMeaningPatch(m) {
         zhEl.className = 'card__example-zh';
         exBlock.appendChild(zhEl);
       }
-      zhEl.textContent = displayZh(m.exampleZh);
+      /* keep the highlight: this line used to be plain text, which is why the
+         word was lit up in the English sentence but never in the Chinese one */
+      zhEl.innerHTML = markZhHits(displayZh(m.exampleZh), displayZh((m.zh && m.zh.length) ? m.zh[0] : ''));
+    } else if (!exBlock && m.example) {
+      /* the example itself only turned up now (a cached entry that had none, or
+         a slow sentence lookup) - draw the block instead of dropping it */
+      const scroller = $('[data-scroller]', el);
+      if (scroller) {
+        const gloss = (m.zh && m.zh.length) ? m.zh[0] : '';
+        const block = document.createElement('div');
+        block.className = 'defblock defblock--example';
+        block.setAttribute('data-example', '');
+        block.innerHTML = '<div class="defblock__label defblock__label--en">Example Sentence</div>' +
+          '<div class="card__example">' + markHits(m.example, m.term) + '</div>' +
+          (m.exampleZh ? '<div class="card__example-zh">' + markZhHits(displayZh(m.exampleZh), displayZh(gloss)) + '</div>' : '');
+        scroller.appendChild(block);
+      }
     }
   });
 }
@@ -3325,6 +3600,7 @@ function syncInfoUI() {
   if (v) v.textContent = 'Version ' + ((NATIVE.isNative && NATIVE.version) ? NATIVE.version : APP_VERSION);
   $$('#defLangSeg .seg').forEach(b =>
     b.classList.toggle('is-active', b.dataset.lang === (state.settings.definitionLang || 'traditional')));
+  if (typeof syncUpdateUI === 'function') syncUpdateUI();
 }
 
 function setDefLang(lang) {
@@ -3337,9 +3613,12 @@ function setDefLang(lang) {
 
 function initInfoSheet() {
   const btn = $('#btnAppInfo');
-  if (btn) btn.addEventListener('click', () => openSheet('sheetInfo'));
+  /* opening the sheet asks GitHub for the newest release (the answer is cached
+     for a few hours, so this is one request a day at most) */
+  if (btn) btn.addEventListener('click', () => { openSheet('sheetInfo'); checkForUpdate(false); });
   $$('#defLangSeg .seg').forEach(b =>
     b.addEventListener('click', () => setDefLang(b.dataset.lang)));
+  initUpdateSheet();
 }
 
 function toggleSwitch(id) {
@@ -4038,6 +4317,27 @@ window.lexiHandleBack = function () {
   return false;
 };
 
+/* open a link outside the app: inside the Android wrapper the system browser
+   takes it (the APK download / the releases page), a normal tab gets a new
+   window instead of navigating the app away */
+function openExternalUrl(url) {
+  const u = String(url || '');
+  if (!/^https?:\/\//i.test(u)) return false;
+  if (NATIVE.isNative && NATIVE.api && typeof NATIVE.api.openExternal === 'function') {
+    try { NATIVE.api.openExternal(u); return true; } catch (e) { /* fall through */ }
+  }
+  try {
+    const a = document.createElement('a');
+    a.href = u;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return true;
+  } catch (e) { return false; }
+}
+
 if (NATIVE.isNative) {
   document.documentElement.setAttribute('data-native', NATIVE.platform);
 }
@@ -4091,6 +4391,187 @@ function speakFallback(term) {
       window.speechSynthesis.speak(u);
     } catch (e) {}
   }
+}
+
+/* =====================================================================
+   Update check - ask GitHub for the newest release
+
+   A release is published as a tag (v1.6) with the built LexiCards.apk as its
+   asset, so one API call tells the app everything: the newest version, the
+   release notes and the APK URL.  The GitHub API is tried first, the
+   version.json that lives in the repository is the fallback for a rate limit
+   or a blocked API; both answer with an Access-Control-Allow-Origin header, so
+   a browser tab and the Android WebView can read them.  The answer is kept in
+   the settings, and it is always compared against the *running* version - after
+   installing the update the sheet says "up to date" again by itself.
+   ===================================================================== */
+const UPDATE_REPO     = 'j77yspv2qt-boop/LexiCards';
+const UPDATE_API      = 'https://api.github.com/repos/' + UPDATE_REPO + '/releases/latest';
+const UPDATE_JSON     = 'https://raw.githubusercontent.com/' + UPDATE_REPO + '/main/version.json';
+const UPDATE_RELEASES = 'https://github.com/' + UPDATE_REPO + '/releases/latest';
+const UPDATE_CHECK_MS = 6 * 60 * 60 * 1000;      /* do not ask GitHub more often than this */
+
+const updateState = {
+  checking: false, checked: false, at: 0,
+  version: '', url: UPDATE_RELEASES, notes: '', error: '', newer: false
+};
+
+/* "1.10" is newer than "1.9" - a plain string compare would say the opposite */
+function versionParts(v) {
+  return String(v == null ? '' : v).replace(/^[vV]/, '').split(/[.\-+]/)
+    .map(p => parseInt(p, 10)).filter(n => !isNaN(n));
+}
+function compareVersion(a, b) {
+  const x = versionParts(a), y = versionParts(b);
+  const len = Math.max(x.length, y.length);
+  for (let i = 0; i < len; i++) {
+    const l = x[i] || 0, r = y[i] || 0;
+    if (l > r) return 1;
+    if (l < r) return -1;
+  }
+  return 0;
+}
+function currentAppVersion() {
+  return (NATIVE.isNative && NATIVE.version) ? NATIVE.version : APP_VERSION;
+}
+
+function loadUpdateState() {
+  const saved = state.settings && state.settings.lastUpdate;
+  if (saved && saved.version) {
+    updateState.version = String(saved.version);
+    updateState.url = saved.url || UPDATE_RELEASES;
+    updateState.notes = String(saved.notes || '');
+    updateState.at = saved.at || 0;
+    updateState.checked = true;
+    updateState.newer = compareVersion(updateState.version, currentAppVersion()) > 0;
+  }
+}
+function saveUpdateState() {
+  state.settings.lastUpdate = {
+    version: updateState.version, url: updateState.url,
+    notes: updateState.notes, at: updateState.at
+  };
+  saveSettings();
+}
+
+function parseGithubRelease(data) {
+  if (!data || !data.tag_name) return null;
+  let apk = '';
+  (data.assets || []).forEach(a => {
+    if (!apk && a && /\.apk$/i.test(a.name || '')) apk = a.browser_download_url || '';
+  });
+  return {
+    version: String(data.tag_name).replace(/^[vV]/, ''),
+    url: apk || data.html_url || UPDATE_RELEASES,
+    notes: String(data.body || '').split('\n').filter(l => l.trim()).slice(0, 3).join(' ').trim(),
+    at: Date.now()
+  };
+}
+function parseVersionFile(data) {
+  if (!data || !data.version) return null;
+  return {
+    version: String(data.version).replace(/^[vV]/, ''),
+    url: data.apk || data.url || UPDATE_RELEASES,
+    notes: String(data.notes || '').trim(),
+    at: Date.now()
+  };
+}
+
+
+function applyUpdateInfo(info) {
+  if (!info || !info.version) return false;
+  updateState.version = info.version;
+  updateState.url = info.url;
+  updateState.notes = info.notes || '';
+  updateState.at = info.at || Date.now();
+  updateState.error = '';
+  updateState.checked = true;
+  updateState.newer = compareVersion(info.version, currentAppVersion()) > 0;
+  saveUpdateState();
+  syncUpdateUI();
+  return updateState.newer;
+}
+
+/* manual === the user pressed the button: always asks, and reports failures */
+function checkForUpdate(manual) {
+  if (updateState.checking) return Promise.resolve(updateState);
+  if (!manual && updateState.checked && (Date.now() - updateState.at) < UPDATE_CHECK_MS) {
+    return Promise.resolve(updateState);
+  }
+  updateState.checking = true;
+  syncUpdateUI();
+  const get = (url) => fetchJSON(url, 8000);
+  return get(UPDATE_API)
+    .then(d => parseGithubRelease(d) || Promise.reject(new Error('no release yet')), () => get(UPDATE_JSON))
+    .then(d => {
+      const info = parseGithubRelease(d) || parseVersionFile(d);
+      if (!info) throw new Error('bad release data');
+      applyUpdateInfo(info);
+    })
+    .catch(err => {
+      updateState.checked = true;
+      updateState.at = Date.now();
+      updateState.error = errText(err);
+      if (manual) showToast('Could not reach GitHub - try the releases page', 'warn');
+      syncUpdateUI();
+    })
+    .then(() => { updateState.checking = false; syncUpdateUI(); return updateState; });
+}
+
+function updateHintText() {
+  const cur = currentAppVersion();
+  if (updateState.checking) return 'Checking GitHub for the newest release...';
+  if (updateState.version && updateState.newer) {
+    return 'v' + updateState.version + ' is available - you have v' + cur + '.' +
+      (updateState.notes ? ' ' + updateState.notes : '');
+  }
+  if (updateState.version) return 'Up to date - v' + cur + ' is the newest release.';
+  if (updateState.checked && updateState.error) {
+    return 'You have v' + cur + '. GitHub could not be reached (' + updateState.error +
+      ') - open the releases page to check by hand.';
+  }
+  return 'You have v' + cur + '. Tap "Check for updates" to look for a newer release on GitHub.';
+}
+
+function syncUpdateUI() {
+  const hint = $('#updateInfo');
+  if (!hint) return;
+  hint.textContent = updateHintText();
+  const check = $('#btnCheckUpdate');
+  if (check) {
+    check.disabled = updateState.checking;
+    check.textContent = updateState.checking ? 'Checking...' : 'Check for updates';
+  }
+  const install = $('#btnInstallUpdate');
+  if (install) {
+    const show = !!(updateState.version && updateState.newer);
+    install.hidden = !show;
+    if (show) install.textContent = 'Download v' + updateState.version;
+  }
+}
+
+function updateDownloadUrl() {
+  return updateState.url || UPDATE_RELEASES;
+}
+function startUpdateDownload() {
+  const url = updateDownloadUrl();
+  if (NATIVE.isNative) showToast('Downloading in your browser - tap the file to install', 'ok', 3600);
+  openExternalUrl(url);
+}
+
+function initUpdateSheet() {
+  const check = $('#btnCheckUpdate');
+  if (check) check.addEventListener('click', () => checkForUpdate(true));
+  const install = $('#btnInstallUpdate');
+  if (install) install.addEventListener('click', startUpdateDownload);
+  const page = $('#btnReleasePage');
+  if (page) page.addEventListener('click', () => openExternalUrl(UPDATE_RELEASES));
+
+  loadUpdateState();
+  syncUpdateUI();
+  /* No check on start-up: the sheet asks GitHub when it is opened (that is the
+     moment the answer is useful), and the answer is then cached for a few hours
+     so a second tap costs nothing. */
 }
 
 /* =====================================================================

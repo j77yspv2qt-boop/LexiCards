@@ -31,6 +31,27 @@ window.lexiHandleBack = function () {
   return false;
 };
 
+/* open a link outside the app: inside the Android wrapper the system browser
+   takes it (the APK download / the releases page), a normal tab gets a new
+   window instead of navigating the app away */
+function openExternalUrl(url) {
+  const u = String(url || '');
+  if (!/^https?:\/\//i.test(u)) return false;
+  if (NATIVE.isNative && NATIVE.api && typeof NATIVE.api.openExternal === 'function') {
+    try { NATIVE.api.openExternal(u); return true; } catch (e) { /* fall through */ }
+  }
+  try {
+    const a = document.createElement('a');
+    a.href = u;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return true;
+  } catch (e) { return false; }
+}
+
 if (NATIVE.isNative) {
   document.documentElement.setAttribute('data-native', NATIVE.platform);
 }

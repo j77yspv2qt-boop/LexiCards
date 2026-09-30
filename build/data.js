@@ -33,6 +33,7 @@ function syncInfoUI() {
   if (v) v.textContent = 'Version ' + ((NATIVE.isNative && NATIVE.version) ? NATIVE.version : APP_VERSION);
   $$('#defLangSeg .seg').forEach(b =>
     b.classList.toggle('is-active', b.dataset.lang === (state.settings.definitionLang || 'traditional')));
+  if (typeof syncUpdateUI === 'function') syncUpdateUI();
 }
 
 function setDefLang(lang) {
@@ -45,9 +46,12 @@ function setDefLang(lang) {
 
 function initInfoSheet() {
   const btn = $('#btnAppInfo');
-  if (btn) btn.addEventListener('click', () => openSheet('sheetInfo'));
+  /* opening the sheet asks GitHub for the newest release (the answer is cached
+     for a few hours, so this is one request a day at most) */
+  if (btn) btn.addEventListener('click', () => { openSheet('sheetInfo'); checkForUpdate(false); });
   $$('#defLangSeg .seg').forEach(b =>
     b.addEventListener('click', () => setDefLang(b.dataset.lang)));
+  initUpdateSheet();
 }
 
 function toggleSwitch(id) {
