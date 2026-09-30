@@ -16,7 +16,7 @@ const LS_KEYS = {
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */
@@ -49,6 +49,11 @@ const TR_CACHE_MAX   = 300;
    endpoint stops costing us anything. */
 const API_TIMEOUT           = 4500;
 const API_HEDGE_MS          = 350;
+/* the translator chain hedges the same way: if the first engine stays quiet
+   for this long the next one is started in parallel and the first answer wins.
+   On a network where one engine is unreachable that turns a 4.5 s timeout into
+   a few hundred milliseconds. */
+const TR_HEDGE_MS           = 350;
 const API_PROVIDER_MAX_FAILS = 2;
 const API_PROVIDER_COOLDOWN = 10 * 60 * 1000;
 

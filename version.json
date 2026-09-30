@@ -1,7 +1,10 @@
 {
-  "version": "1.6",
+  "version": "1.7",
   "released": "2026-09-30",
   "apk": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest/download/LexiCards.apk",
+  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v1.7/LexiCards.apk",
   "page": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest",
-  "notes": "Example sentences on every card (including searched words), Chinese example highlighting, Traditional-conversion typo fix, in-app update check."
+  "mirror_page": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@main/",
+  "notes": "Translations answer in a few hundred milliseconds even when one engine is unreachable, and the update check now works through jsDelivr mirrors on networks where GitHub is blocked."
 }
+

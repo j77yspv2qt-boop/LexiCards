@@ -46,23 +46,28 @@ window.fetch = function (url, opts) {
   }
   if (u.indexOf('en.wiktionary.org/w/api.php') >= 0) {
     if (mode === 'all-fail') return Promise.reject(new TypeError('Failed to fetch'));
-    return json({ parse: { wikitext: { '*': '==English==\n#: The stub sings every morning.\n' } } });
+    return json({ parse: { wikitext: { '*': '==English==\\n#: The stub sings every morning.\\n' } } });
   }
   if (u.indexOf('en.wiktionary.org') >= 0) {
     if (mode === 'all-fail') return Promise.reject(new TypeError('Failed to fetch'));
     return json({ en: [{ partOfSpeech: 'Interjection', definitions: [{ definition: 'A <a href="/wiki/greeting">greeting</a> said on meeting.' }] }] });
   }
   if (u.indexOf('api.github.com') >= 0) {
-    if (mode === 'no-github') return Promise.reject(new TypeError('Failed to fetch'));
+    if (mode === 'no-github' || window.__updateMode === 'github-blocked') return Promise.reject(new TypeError('Failed to fetch'));
     return json({
       tag_name: 'v9.9',
       html_url: 'https://github.com/j77yspv2qt-boop/LexiCards/releases/tag/v9.9',
-      body: 'Stub release notes.\nSecond line.',
+      body: ['Stub release notes.', 'Second line.'].join(String.fromCharCode(10)),
       assets: [{ name: 'LexiCards.apk', browser_download_url: 'https://github.com/stub/LexiCards-v9.9.apk' }]
     });
   }
   if (u.indexOf('raw.githubusercontent.com') >= 0) {
-    if (mode === 'no-github') return Promise.reject(new TypeError('Failed to fetch'));
+    if (mode === 'no-github' || window.__updateMode === 'github-blocked') return Promise.reject(new TypeError('Failed to fetch'));
+    return json({ version: '9.9', apk: 'https://github.com/stub/version-json.apk', apk_mirror: 'https://cdn.jsdelivr.net/gh/stub@v9.9/LexiCards.apk', notes: 'from version.json' });
+  }
+  if (u.indexOf('jsdelivr.net') >= 0) {
+    return json({ version: '9.9', apk: 'https://github.com/stub/version-json.apk',
+      apk_mirror: 'https://cdn.jsdelivr.net/gh/stub@v9.9/LexiCards.apk', notes: 'mirror version.json' });
     return json({ version: '9.9', apk: 'https://github.com/stub/version-json.apk', notes: 'from version.json' });
   }
   if (u.indexOf('api.datamuse.com') >= 0) {
@@ -70,11 +75,13 @@ window.fetch = function (url, opts) {
     return json([{ word: 'stub', defs: ['n\\ta greeting used on meeting'] }]);
   }
   if (u.indexOf('translate.googleapis.com') >= 0) {
+    /* the engine simply never answers: mainland-China style blocking */
+    if (mode === 'hang-google') return new Promise(function () {});
     if (mode === 'all-fail' || mode === 'no-google') return Promise.reject(new TypeError('Failed to fetch'));
     return json([[['你好', 'stub', null, null, 3]], null, 'en']);
   }
   if (u.indexOf('mymemory.translated.net') >= 0) {
-    if (mode === 'all-fail') return Promise.reject(new TypeError('Failed to fetch'));
+    if (mode === 'all-fail' || mode === 'no-mymemory') return Promise.reject(new TypeError('Failed to fetch'));
     return json({ responseData: { translatedText: '你好', match: 0.9 }, responseStatus: 200, quotaFinished: false });
   }
   /* Nothing outside the list above is reached: a real request would hang the
@@ -120,7 +127,7 @@ def chrome(*args, url, timeout=60):
            "--no-first-run", "--no-default-browser-check", "--disable-extensions",
            "--disable-background-networking", "--disable-sync", "--disable-features=Translate",
            "--user-data-dir=" + profile,
-           "--window-size=480,900", "--virtual-time-budget=12000"] + list(args) + [url]
+           "--window-size=480,900", "--virtual-time-budget=25000"] + list(args) + [url]
     try:
         return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     finally:

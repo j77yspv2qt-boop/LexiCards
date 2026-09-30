@@ -20,6 +20,9 @@ function finish() {
 async function run() {
   try {
     await wait(250);
+    step('smoke: network stubs installed before the app asked anything',
+      typeof window.__fetchMode === 'string' && Array.isArray(window.__fetchLog),
+      typeof window.__fetchMode + ' | ' + (window.__fetchLog || []).length + ' calls so far');
 
     /* ---- 1. deck renders ---- */
     var cards = document.querySelectorAll('#stage .card');

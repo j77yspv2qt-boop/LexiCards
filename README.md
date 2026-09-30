@@ -378,6 +378,51 @@ python3 build/make_data.py                # 約 2–3 分鐘
 
 ---
 
+## 9. 中國大陸使用說明
+
+核心功能（查詞、內建詞庫、例句與高亮、CEFR 篩選、三選一測驗、記錄與備份）**完全離線可用**，不依賴任何境外服務。下面只說明「需要網路」的部分。
+
+### 9.1 需要網路的服務與內地狀況
+
+| 服務 | 內地狀況 | App 的處理 |
+|---|---|---|
+| Google 翻譯 `translate.googleapis.com` | 被封 | **並行競速**：第一個引擎安靜 350ms 就同時啟動下一個，先回者勝，不會等 4.5 秒逾時；失敗兩次後該來源被冷卻 10 分鐘，之後完全不再嘗試 |
+| 維基百科 `en.wiktionary.org` | 被封 | 英文定義自動改走 Free Dictionary API → Datamuse |
+| GitHub API `api.github.com` | 通常被封 | 更新檢查改走 jsDelivr 的三組 CDN（cdn / fastly / gcore） |
+| `raw.githubusercontent.com` | 被封 | 同上 |
+| Free Dictionary API、Datamuse | 一般可用（跨境可能偏慢） | 超時 4.5 秒自動切換來源；連續失敗兩次會冷卻 10 分鐘 |
+| MyMemory 翻譯 | 可用（有每日額度） | Google 掛掉後的主要翻譯來源 |
+| 有道 `dict.youdao.com` 發音 | 可用（境內服務） | 發音的預設來源 |
+
+**最壞情況**（以上翻譯來源全部不可用）：卡片仍顯示**內建釋義與例句**（涵蓋率 100%），只少顯示英文定義與例句中文翻譯，不影響任何功能。
+
+### 9.2 檢查更新
+
+設定 → App info → **Check for updates**：
+
+- 五個來源（GitHub API、jsDelivr×3、GitHub raw）**同時**發出，先回者勝 —— GitHub 被封時會自動用 jsDelivr 鏡像，不需手動干預
+- 提示會標明實際來源，例如 `Up to date - v1.7 is the newest release (checked via jsDelivr (Fastly))`
+- 發現新版本時會多一個 **Mirror download** 按鈕：透過 jsDelivr 直接下載版本 tag 內的 `LexiCards.apk`（`cdn.jsdelivr.net` 內地通常可連），不必開 GitHub Releases
+- 若全部來源都失敗，只會顯示一行錯誤提示，不影響任何功能
+
+### 9.3 取得安裝檔（GitHub Releases 不穩時）
+
+`github.com` 的 Release 下載在內地時通時斷，可改用 jsDelivr 鏡像直連（把 `v1.7` 換成要下載的 tag）：
+
+```
+https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v1.7/LexiCards.apk
+```
+
+也可自行放一份到 Gitee Release 或網盤；App 內的 Mirror download 按鈕指向的就是同一條鏡像路徑。
+
+### 9.4 首次使用提示
+
+- 第一次查詞若遇到約 4 秒的延遲，是被封來源的逾時冷啟動成本；來源失效被記錄後，之後的查詞會直接走可用來源（實測約 300–600ms）
+- 若開啟後偶爾出現「reached the update servers」提示，代表當時五個更新來源都不可達，稍後再試即可
+
+
+---
+
 ## 9. 修訂紀錄
 
 ### v1.6

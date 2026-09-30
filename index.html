@@ -706,7 +706,9 @@ body[data-revsub="records"] .fab{display:grid}
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
           <button type="button" class="btn btn--ghost btn--sm" id="btnCheckUpdate">Check for updates</button>
           <button type="button" class="btn btn--primary btn--sm" id="btnInstallUpdate" hidden>Download update</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnInstallMirror" hidden>Mirror download</button>
           <button type="button" class="btn btn--ghost btn--sm" id="btnReleasePage">Releases page</button>
+
         </div>
       </div>
       <div class="sheet__foot">
@@ -740,7 +742,7 @@ const LS_KEYS = {
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */
@@ -773,6 +775,11 @@ const TR_CACHE_MAX   = 300;
    endpoint stops costing us anything. */
 const API_TIMEOUT           = 4500;
 const API_HEDGE_MS          = 350;
+/* the translator chain hedges the same way: if the first engine stays quiet
+   for this long the next one is started in parallel and the first answer wins.
+   On a network where one engine is unreachable that turns a 4.5 s timeout into
+   a few hundred milliseconds. */
+const TR_HEDGE_MS           = 350;
 const API_PROVIDER_MAX_FAILS = 2;
 const API_PROVIDER_COOLDOWN = 10 * 60 * 1000;
 
@@ -2177,23 +2184,81 @@ const TRANSLATORS = [
   { id: 'mymemory',     fn: translateToZh }
 ];
 
+/* ---------------------------- translators ----------------------------
+   Same idea as the English chain, with one extra twist: the order is decided
+   by what we have measured.  A provider that timed out (deadUntil set) goes
+   last, then the fastest answer so far comes first - so on a network where
+   Google Translate is unreachable the app settles on MyMemory after the first
+   couple of lookups, and on a network where Google answers in 150 ms it keeps
+   using Google. */
+function translatorRank(t) {
+  const p = providerHealth(t.id);
+  if (providerIsDown(t.id)) return 2;               /* known dead - go last */
+  if (p.hedged && !p.ok) return 1;                  /* stayed quiet past the hedge window */
+  return 0;
+}
+function translatorOrder() {
+  const ranked = TRANSLATORS.slice().sort((a, b) => {
+    const ra = translatorRank(a), rb = translatorRank(b);
+    if (ra !== rb) return ra - rb;
+    /* a provider that never answered has no measurement, so it keeps its
+       configured place among equals instead of pretending to be fastest */
+    const ma = providerHealth(a.id).ok ? providerHealth(a.id).lastMs : 0;
+    const mb = providerHealth(b.id).ok ? providerHealth(b.id).lastMs : 0;
+    return ma - mb;
+  });
+  /* a known-dead engine is left out entirely while another one is alive - no
+     point paying its timeout on every lookup.  Only when everything is marked
+     down do we start from the top again (the network may be back). */
+  const live = ranked.filter(t => !providerIsDown(t.id));
+  return live.length ? live : ranked;
+}
+
 function translateToZhSmart(text) {
-  let live = TRANSLATORS.filter(t => !providerIsDown(t.id));
-  if (!live.length) live = TRANSLATORS.slice();
-  let chain = Promise.reject(new Error('no translator available'));
-  live.forEach(t => {
-    chain = chain.catch(() => {
+  const list = translatorOrder();
+  if (!list.length) return Promise.reject(new Error('no translator available'));
+  return new Promise((resolve, reject) => {
+    let started = 0, pending = 0, settled = false, lastErr = null, hedge = null;
+
+    function clearHedge() { if (hedge) { clearTimeout(hedge); hedge = null; } }
+    function settle(value, err) {
+      settled = true;
+      clearHedge();
+      if (err) reject(err); else resolve(value);
+    }
+
+    function startNext() {
+      if (settled || started >= list.length) return;
+      clearHedge();
+      const t = list[started++];
       const at = Date.now();
-      return t.fn(text).then(res => {
+      pending++;
+      let run;
+      try { run = t.fn(text); } catch (e) { run = Promise.reject(e); }
+      Promise.resolve(run).then(res => {
         noteProviderResult(t.id, true, Date.now() - at);
-        return res;
+        pending--;
+        if (!settled) settle(res, null);
       }, err => {
         noteProviderResult(t.id, false, Date.now() - at);
-        throw err;
+        pending--;
+        if (!lastErr) lastErr = err;
+        if (settled) return;
+        if (started < list.length) startNext();       /* a miss promotes the next engine */
+        else if (!pending) settle(null, lastErr);
       });
-    });
+      /* still quiet after the hedge window? start the next one in parallel,
+         and remember that this engine needed the nudge - the next call will
+         put it behind the one that actually answered */
+      if (started < list.length) {
+        const p = providerHealth(t.id);
+        if (!p.ok) p.hedged = (p.hedged || 0) + 1;
+        hedge = setTimeout(startNext, TR_HEDGE_MS);
+      }
+    }
+
+    startNext();
   });
-  return chain;
 }
 
 /* ---- translation cache: the same sentence is never translated twice ---- */
@@ -4406,14 +4471,36 @@ function speakFallback(term) {
    installing the update the sheet says "up to date" again by itself.
    ===================================================================== */
 const UPDATE_REPO     = 'j77yspv2qt-boop/LexiCards';
-const UPDATE_API      = 'https://api.github.com/repos/' + UPDATE_REPO + '/releases/latest';
-const UPDATE_JSON     = 'https://raw.githubusercontent.com/' + UPDATE_REPO + '/main/version.json';
 const UPDATE_RELEASES = 'https://github.com/' + UPDATE_REPO + '/releases/latest';
 const UPDATE_CHECK_MS = 6 * 60 * 60 * 1000;      /* do not ask GitHub more often than this */
 
+/* Where the newest version can be read from.  Every entry answers with an
+   Access-Control-Allow-Origin header, so a browser tab and the Android WebView
+   can both read it, and all of them are asked at the same time - the first
+   usable answer wins, no waiting in line.
+
+   The GitHub API gives the richest answer (tag, release notes, APK asset), but
+   api.github.com and raw.githubusercontent.com are unreachable on some
+   networks (mainland China in particular).  jsDelivr serves the same
+   version.json straight out of the repository through three separate CDNs
+   (Cloudflare, Fastly, Gcore) and stays reachable there, so the check keeps
+   working. */
+const UPDATE_SOURCES = [
+  { id: 'github',  url: 'https://api.github.com/repos/' + UPDATE_REPO + '/releases/latest' },
+  { id: 'jsdelivr',       url: 'https://cdn.jsdelivr.net/gh/' + UPDATE_REPO + '@main/version.json' },
+  { id: 'jsdelivr-fastly', url: 'https://fastly.jsdelivr.net/gh/' + UPDATE_REPO + '@main/version.json' },
+  { id: 'jsdelivr-gcore',  url: 'https://gcore.jsdelivr.net/gh/' + UPDATE_REPO + '@main/version.json' },
+  { id: 'raw', url: 'https://raw.githubusercontent.com/' + UPDATE_REPO + '/main/version.json' }
+];
+const UPDATE_TIMEOUT_MS = 8000;
+/* branch refs on a CDN are cached for a while - a day stamp keeps the answer
+   from going stale for longer than that */
+const UPDATE_STAMP = new Date().toISOString().slice(0, 10);
+
 const updateState = {
   checking: false, checked: false, at: 0,
-  version: '', url: UPDATE_RELEASES, notes: '', error: '', newer: false
+  version: '', url: UPDATE_RELEASES, mirror: '', page: UPDATE_RELEASES,
+  notes: '', error: '', source: '', newer: false
 };
 
 /* "1.10" is newer than "1.9" - a plain string compare would say the opposite */
@@ -4440,7 +4527,10 @@ function loadUpdateState() {
   if (saved && saved.version) {
     updateState.version = String(saved.version);
     updateState.url = saved.url || UPDATE_RELEASES;
+    updateState.mirror = saved.mirror || '';
+    updateState.page = saved.page || UPDATE_RELEASES;
     updateState.notes = String(saved.notes || '');
+    updateState.source = String(saved.source || '');
     updateState.at = saved.at || 0;
     updateState.checked = true;
     updateState.newer = compareVersion(updateState.version, currentAppVersion()) > 0;
@@ -4448,8 +4538,9 @@ function loadUpdateState() {
 }
 function saveUpdateState() {
   state.settings.lastUpdate = {
-    version: updateState.version, url: updateState.url,
-    notes: updateState.notes, at: updateState.at
+    version: updateState.version, url: updateState.url, mirror: updateState.mirror,
+    page: updateState.page, notes: updateState.notes, source: updateState.source,
+    at: updateState.at
   };
   saveSettings();
 }
@@ -4460,9 +4551,14 @@ function parseGithubRelease(data) {
   (data.assets || []).forEach(a => {
     if (!apk && a && /\.apk$/i.test(a.name || '')) apk = a.browser_download_url || '';
   });
+  const tag = String(data.tag_name).replace(/^[vV]/, '');
   return {
-    version: String(data.tag_name).replace(/^[vV]/, ''),
+    version: tag,
     url: apk || data.html_url || UPDATE_RELEASES,
+    /* a copy of the APK inside the repository, served by jsDelivr, for the
+       networks where the release asset cannot be downloaded */
+    mirror: 'https://cdn.jsdelivr.net/gh/' + UPDATE_REPO + '@v' + tag + '/LexiCards.apk',
+    page: data.html_url || UPDATE_RELEASES,
     notes: String(data.body || '').split('\n').filter(l => l.trim()).slice(0, 3).join(' ').trim(),
     at: Date.now()
   };
@@ -4472,17 +4568,22 @@ function parseVersionFile(data) {
   return {
     version: String(data.version).replace(/^[vV]/, ''),
     url: data.apk || data.url || UPDATE_RELEASES,
+    mirror: data.apk_mirror || data.apk_cn || '',
+    page: data.mirror_page || data.page || UPDATE_RELEASES,
     notes: String(data.notes || '').trim(),
     at: Date.now()
   };
 }
 
 
-function applyUpdateInfo(info) {
+function applyUpdateInfo(info, source) {
   if (!info || !info.version) return false;
   updateState.version = info.version;
   updateState.url = info.url;
+  updateState.mirror = info.mirror || '';
+  updateState.page = info.page || UPDATE_RELEASES;
   updateState.notes = info.notes || '';
+  updateState.source = source || '';
   updateState.at = info.at || Date.now();
   updateState.error = '';
   updateState.checked = true;
@@ -4490,6 +4591,26 @@ function applyUpdateInfo(info) {
   saveUpdateState();
   syncUpdateUI();
   return updateState.newer;
+}
+
+/* first usable answer wins; the rest keep running but are ignored */
+function firstUpdateInfo() {
+  const tries = UPDATE_SOURCES.map(src => {
+    const url = src.url + (src.url.indexOf('?') >= 0 ? '&' : '?') + 'd=' + UPDATE_STAMP;
+    return fetchJSON(url, UPDATE_TIMEOUT_MS).then(data => {
+      const info = (src.id === 'github') ? parseGithubRelease(data) : parseVersionFile(data);
+      if (!info || !info.version) throw new Error('no version in ' + src.id);
+      return { info: info, source: src.id };
+    });
+  });
+  return new Promise((resolve, reject) => {
+    let failed = 0, firstErr = null;
+    tries.forEach(p => p.then(hit => resolve(hit), err => {
+      if (!firstErr) firstErr = err;
+      failed++;
+      if (failed === tries.length) reject(firstErr || new Error('no update source answered'));
+    }));
+  });
 }
 
 /* manual === the user pressed the button: always asks, and reports failures */
@@ -4500,37 +4621,42 @@ function checkForUpdate(manual) {
   }
   updateState.checking = true;
   syncUpdateUI();
-  const get = (url) => fetchJSON(url, 8000);
-  return get(UPDATE_API)
-    .then(d => parseGithubRelease(d) || Promise.reject(new Error('no release yet')), () => get(UPDATE_JSON))
-    .then(d => {
-      const info = parseGithubRelease(d) || parseVersionFile(d);
-      if (!info) throw new Error('bad release data');
-      applyUpdateInfo(info);
-    })
+  return firstUpdateInfo()
+    .then(hit => { applyUpdateInfo(hit.info, hit.source); })
     .catch(err => {
       updateState.checked = true;
       updateState.at = Date.now();
       updateState.error = errText(err);
-      if (manual) showToast('Could not reach GitHub - try the releases page', 'warn');
+      if (manual) showToast('Could not reach the update servers - try again later', 'warn');
       syncUpdateUI();
     })
     .then(() => { updateState.checking = false; syncUpdateUI(); return updateState; });
 }
 
+function updateSourceLabel(id) {
+  const map = {
+    'github': 'GitHub', 'jsdelivr': 'jsDelivr', 'jsdelivr-fastly': 'jsDelivr (Fastly)',
+    'jsdelivr-gcore': 'jsDelivr (Gcore)', 'raw': 'GitHub raw'
+  };
+  return map[id] || id || '';
+}
+
 function updateHintText() {
   const cur = currentAppVersion();
-  if (updateState.checking) return 'Checking GitHub for the newest release...';
+  if (updateState.checking) return 'Checking for the newest release...';
   if (updateState.version && updateState.newer) {
     return 'v' + updateState.version + ' is available - you have v' + cur + '.' +
       (updateState.notes ? ' ' + updateState.notes : '');
   }
-  if (updateState.version) return 'Up to date - v' + cur + ' is the newest release.';
-  if (updateState.checked && updateState.error) {
-    return 'You have v' + cur + '. GitHub could not be reached (' + updateState.error +
-      ') - open the releases page to check by hand.';
+  if (updateState.version) {
+    return 'Up to date - v' + cur + ' is the newest release' +
+      (updateState.source ? ' (checked via ' + updateSourceLabel(updateState.source) + ').' : '.');
   }
-  return 'You have v' + cur + '. Tap "Check for updates" to look for a newer release on GitHub.';
+  if (updateState.checked && updateState.error) {
+    return 'You have v' + cur + '. The update servers could not be reached (' +
+      updateState.error + ') - open the releases page to check by hand.';
+  }
+  return 'You have v' + cur + '. Tap "Check for updates" to look for a newer release.';
 }
 
 function syncUpdateUI() {
@@ -4548,30 +4674,48 @@ function syncUpdateUI() {
     install.hidden = !show;
     if (show) install.textContent = 'Download v' + updateState.version;
   }
+  const mirror = $('#btnInstallMirror');
+  if (mirror) {
+    const show = !!(updateState.version && updateState.newer && updateState.mirror);
+    mirror.hidden = !show;
+    if (show) mirror.textContent = 'Mirror download';
+  }
 }
 
 function updateDownloadUrl() {
   return updateState.url || UPDATE_RELEASES;
 }
-function startUpdateDownload() {
-  const url = updateDownloadUrl();
-  if (NATIVE.isNative) showToast('Downloading in your browser - tap the file to install', 'ok', 3600);
+function updateMirrorUrl() {
+  return updateState.mirror || '';
+}
+function startUpdateDownload(useMirror) {
+  const url = (useMirror && updateMirrorUrl()) ? updateMirrorUrl() : updateDownloadUrl();
+  if (NATIVE.isNative) {
+    showToast(useMirror ? 'Downloading the mirror copy - tap the file to install'
+                        : 'Downloading in your browser - tap the file to install', 'ok', 3600);
+  }
   openExternalUrl(url);
+}
+
+function openUpdatePage() {
+  openExternalUrl(updateState.page || UPDATE_RELEASES);
 }
 
 function initUpdateSheet() {
   const check = $('#btnCheckUpdate');
   if (check) check.addEventListener('click', () => checkForUpdate(true));
   const install = $('#btnInstallUpdate');
-  if (install) install.addEventListener('click', startUpdateDownload);
+  if (install) install.addEventListener('click', () => startUpdateDownload(false));
+  const mirror = $('#btnInstallMirror');
+  if (mirror) mirror.addEventListener('click', () => startUpdateDownload(true));
   const page = $('#btnReleasePage');
-  if (page) page.addEventListener('click', () => openExternalUrl(UPDATE_RELEASES));
+  if (page) page.addEventListener('click', openUpdatePage);
 
   loadUpdateState();
   syncUpdateUI();
-  /* No check on start-up: the sheet asks GitHub when it is opened (that is the
-     moment the answer is useful), and the answer is then cached for a few hours
-     so a second tap costs nothing. */
+  /* No check on start-up: the sheet asks when it is opened (that is the moment
+     the answer is useful), and the answer is then cached for a few hours so a
+     second tap costs nothing. */
 }
 
 /* =====================================================================

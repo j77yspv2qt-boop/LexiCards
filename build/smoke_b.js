@@ -188,6 +188,71 @@
     step('a cached card without a Chinese explanation heals itself',
       (state.cache[hk].defZh || []).length === 1, (state.cache[hk].defZh || []).join(''));
 
+    /* ---- 10d. translation speed on a network where one engine is silent ---- */
+    Object.keys(PROVIDER_STATE).forEach(function (k) { delete PROVIDER_STATE[k]; });
+    state.tr = {};
+    window.__fetchMode = 'hang-google';
+    var logFrom = window.__fetchLog.length;
+    var mh = await getMeaning('hedgeword', 'word', true);
+    var hedgeLog = window.__fetchLog.slice(logFrom);
+    step('hedge: the answer lands although the first engine never answers',
+      mh.zh.length === 1 && mh.zh[0] === '你好', mh.zh.join(''));
+    step('hedge: the next engine starts while the first is still quiet',
+      hedgeLog.some(function (u) { return u.indexOf('mymemory') >= 0; }) &&
+      hedgeLog.some(function (u) { return u.indexOf('translate.googleapis.com') >= 0; }),
+      hedgeLog.length + ' requests');
+    window.__fetchMode = 'ok';
+
+    /* the measured latency reorders the chain, and a two-time loser is skipped */
+    noteProviderResult('mymemory', true, 120);
+    noteProviderResult('google-trans', false, 4500);
+    noteProviderResult('google-trans', false, 4500);
+    step('chain order puts the engine that answered first',
+      translatorOrder()[0].id === 'mymemory',
+      translatorOrder().map(function (t) { return t.id; }).join(' > '));
+    step('a two-time loser is taken out of the chain', providerIsDown('google-trans') === true);
+
+    /* worst case: every engine is down - the bundled table still answers */
+    window.__fetchMode = 'all-fail';
+    var mw = await getMeaning('basket', 'word', true);
+    step('bundled gloss covers the case where every engine is down',
+      mw.zh.length > 0 && !!mw.example, mw.zh.join(' / ') + ' | ' + mw.example);
+    window.__fetchMode = 'ok';
+
+    /* ---- 10e. the update check survives a blocked GitHub ---- */
+    window.__updateMode = 'github-blocked';
+    await checkForUpdate(true);
+    step('update: falls back to the jsDelivr mirror when GitHub is blocked',
+      updateState.source.indexOf('jsdelivr') === 0 && updateState.version === '9.9',
+      updateState.source + ' -> v' + updateState.version);
+    step('update: a newer release is recognised', updateState.newer === true, updateState.version);
+    step('update: a mirror download is offered',
+      document.getElementById('btnInstallMirror').hidden === false,
+      document.getElementById('btnInstallMirror').textContent);
+    step('update: the hint names the new version', updateHintText().indexOf('9.9') >= 0, updateHintText());
+
+    window.__updateMode = 'github-ok';
+    updateState.checked = false; updateState.at = 0;
+    await checkForUpdate(true);
+    step('update: every source agrees on 9.9',
+      updateState.version === '9.9' &&
+      ['github', 'jsdelivr', 'jsdelivr-fastly', 'jsdelivr-gcore', 'raw'].indexOf(updateState.source) >= 0,
+      updateState.source + ' -> v' + updateState.version);
+    step('update: a release payload gives the APK asset link',
+      parseGithubRelease({ tag_name: 'v9.9', html_url: 'https://example.com/page',
+        body: 'b', assets: [{ name: 'LexiCards.apk', browser_download_url: 'https://example.com/a.apk' }] }).url
+        === 'https://example.com/a.apk', 'asset url parsed');
+    step('update: version.json gives the jsDelivr mirror link',
+      parseVersionFile({ version: '9.9', apk_mirror: 'https://cdn.jsdelivr.net/gh/a@v9.9/LexiCards.apk' }).mirror
+        .indexOf('jsdelivr') >= 0, 'mirror url parsed');
+    var stampBefore = updateState.at;
+    var logBefore = window.__fetchLog.length;
+    await checkForUpdate(false);
+    step('update: a second tap inside the window costs no request',
+      updateState.at === stampBefore && window.__fetchLog.length === logBefore,
+      'throttled for ' + Math.round(UPDATE_CHECK_MS / 3600000) + 'h');
+
+
     /* ---- 11. settings + sheets + storage ---- */
     toggleSwitch('swHaptics');
     step('settings switch toggles', state.settings.haptics === false);

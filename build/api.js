@@ -299,23 +299,81 @@ const TRANSLATORS = [
   { id: 'mymemory',     fn: translateToZh }
 ];
 
+/* ---------------------------- translators ----------------------------
+   Same idea as the English chain, with one extra twist: the order is decided
+   by what we have measured.  A provider that timed out (deadUntil set) goes
+   last, then the fastest answer so far comes first - so on a network where
+   Google Translate is unreachable the app settles on MyMemory after the first
+   couple of lookups, and on a network where Google answers in 150 ms it keeps
+   using Google. */
+function translatorRank(t) {
+  const p = providerHealth(t.id);
+  if (providerIsDown(t.id)) return 2;               /* known dead - go last */
+  if (p.hedged && !p.ok) return 1;                  /* stayed quiet past the hedge window */
+  return 0;
+}
+function translatorOrder() {
+  const ranked = TRANSLATORS.slice().sort((a, b) => {
+    const ra = translatorRank(a), rb = translatorRank(b);
+    if (ra !== rb) return ra - rb;
+    /* a provider that never answered has no measurement, so it keeps its
+       configured place among equals instead of pretending to be fastest */
+    const ma = providerHealth(a.id).ok ? providerHealth(a.id).lastMs : 0;
+    const mb = providerHealth(b.id).ok ? providerHealth(b.id).lastMs : 0;
+    return ma - mb;
+  });
+  /* a known-dead engine is left out entirely while another one is alive - no
+     point paying its timeout on every lookup.  Only when everything is marked
+     down do we start from the top again (the network may be back). */
+  const live = ranked.filter(t => !providerIsDown(t.id));
+  return live.length ? live : ranked;
+}
+
 function translateToZhSmart(text) {
-  let live = TRANSLATORS.filter(t => !providerIsDown(t.id));
-  if (!live.length) live = TRANSLATORS.slice();
-  let chain = Promise.reject(new Error('no translator available'));
-  live.forEach(t => {
-    chain = chain.catch(() => {
+  const list = translatorOrder();
+  if (!list.length) return Promise.reject(new Error('no translator available'));
+  return new Promise((resolve, reject) => {
+    let started = 0, pending = 0, settled = false, lastErr = null, hedge = null;
+
+    function clearHedge() { if (hedge) { clearTimeout(hedge); hedge = null; } }
+    function settle(value, err) {
+      settled = true;
+      clearHedge();
+      if (err) reject(err); else resolve(value);
+    }
+
+    function startNext() {
+      if (settled || started >= list.length) return;
+      clearHedge();
+      const t = list[started++];
       const at = Date.now();
-      return t.fn(text).then(res => {
+      pending++;
+      let run;
+      try { run = t.fn(text); } catch (e) { run = Promise.reject(e); }
+      Promise.resolve(run).then(res => {
         noteProviderResult(t.id, true, Date.now() - at);
-        return res;
+        pending--;
+        if (!settled) settle(res, null);
       }, err => {
         noteProviderResult(t.id, false, Date.now() - at);
-        throw err;
+        pending--;
+        if (!lastErr) lastErr = err;
+        if (settled) return;
+        if (started < list.length) startNext();       /* a miss promotes the next engine */
+        else if (!pending) settle(null, lastErr);
       });
-    });
+      /* still quiet after the hedge window? start the next one in parallel,
+         and remember that this engine needed the nudge - the next call will
+         put it behind the one that actually answered */
+      if (started < list.length) {
+        const p = providerHealth(t.id);
+        if (!p.ok) p.hedged = (p.hedged || 0) + 1;
+        hedge = setTimeout(startNext, TR_HEDGE_MS);
+      }
+    }
+
+    startNext();
   });
-  return chain;
 }
 
 /* ---- translation cache: the same sentence is never translated twice ---- */
