@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Gothic: a grey page with near-black panels.  These are the
+         same colours the skin table gives the running app
+         (build/skin.js), for the parts of a launch that are
+         painted before any of it has run. -->
+    <color name="gothic_window_background">#3A3A3A</color>
+    <color name="gothic_status_bar">#1C1C1E</color>
+    <color name="gothic_nav_bar">#141414</color>
+    <!-- the theme MainActivity switches to when the Gothic launcher
+         alias started it: the remembered skin is whichever alias
+         is enabled -->
+    <style name="GothicTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/gothic_window_background</item>
+        <item name="android:statusBarColor">@color/gothic_status_bar</item>
+        <item name="android:navigationBarColor">@color/gothic_nav_bar</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+    <!-- the starting window that alias shows; the running activity
+         then swaps to GothicTheme in onCreate -->
+    <style name="GothicSplashTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background_gothic</item>
+        <item name="android:statusBarColor">@color/gothic_status_bar</item>
+        <item name="android:navigationBarColor">@color/gothic_nav_bar</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

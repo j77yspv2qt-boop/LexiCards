@@ -5,7 +5,7 @@
 內建 Oxford 3000/5000 完整詞庫的中文釋義、音標與例句，**沒有網路也能學**；測驗以 CEFR 程度出題，答題有干擾項、動畫與震動回饋；所有記錄只存在你自己的裝置，並且有滾動備份。
 
 - 網頁版：`index.html`（零依賴、零建置，雙擊即用）
-- Android 版：Releases 頁的 `LexiCards.apk`（v1.6，約 820 KB）
+- Android 版：Releases 頁的 `LexiCards.apk`（v2.0，約 1.4 MB）
 
 ---
 
@@ -36,7 +36,19 @@ python3 -m http.server 8000
 
 ## 2. 功能說明
 
-頂部有兩個主頁：**Dictionary**（字典）與 **Revision**（複習）。
+App 共**四個頁面**，由左至右依序為 **Discover → My Cards → Records → Quiz**。
+在畫面上**左右滑動**即可換頁，底部導覽列（每頁一顆圖示）也可以直接點擊跳頁。
+每個頁面標題旁都有對應的圖示：字典書本、卡片、清單、問號。
+
+> 舊版的 **Dictionary / Revision** 兩層切換已改為上述四頁的單層滑動；
+> `state.view` / `dictSub` / `revSub` 仍在內部保留，程式其他部分無需改動。
+
+| 頁面 | 內容 |
+|---|---|
+| **Discover** | 內建詞庫隨機洗牌輪播（5,717 筆，見第 3 節） |
+| **My Cards** | 你已記錄的詞彙 / 短語 / 句式，同樣以卡片輪播 |
+| **Records** | 全部已儲存詞彙的清單，可搜尋、排序、編輯、刪除 |
+| **Quiz** | 三選一測驗，可選範圍並統計正確率 |
 
 ### 2.1 Dictionary（字典頁）
 
@@ -72,14 +84,20 @@ python3 -m http.server 8000
 
 | 操作 | 行為 |
 |---|---|
-| 左右撥動 | 切換上一張 / 下一張卡片（3 層卡片堆疊視覺） |
+| 在頁面背景左右滑動 | 換頁：Discover → My Cards → Records → Quiz（拖曳超過 18% 寬度、或快速輕掃即換頁，否則彈回） |
+| 點底部導覽列 | 直接跳到該頁 |
+| 在卡片上左右撥動 | 切換上一張 / 下一張卡片（3 層卡片堆疊視覺） |
 | 長按卡片 450ms | 頁面下方滑出「加入記錄」面板，卡片變成可拖曳 |
 | 拖到面板上 | 面板變紅色並放大，出現紅框與震動提示 |
-| 在面板上鬆手 | 存入 Revision → Records，顯示 `Saved` |
+| 在面板上鬆手 | 存入 Records，顯示 `Saved` |
 | 在面板外鬆手 / 手勢被系統中斷 | 全部復位，**不會寫入** |
 | 點面板（滑鼠／鍵盤使用者） | 等同鬆手，直接存入 |
 | 點卡片內文的 `Retry` | 重新抓取該詞的詞義 |
-| 桌機快捷鍵 | `←` / `→` 換卡、`S` 儲存、`R` 洗牌、`Esc` 關閉面板 |
+| Android 返回鍵 | 依序退回上一頁；在第一頁才交還系統（離開 App） |
+| 桌機快捷鍵 | `←` / `→` 換卡、`S` 儲存、`R` 洗牌、`PageUp` / `PageDown` 換頁、`Esc` 關閉面板 |
+
+> 換頁的滑動在每一頁的內容區都生效（包含 Records 清單與 Quiz 選項區），
+> 只有卡片、晶片、按鈕與輸入框會自行處理手勢；直向滑動仍然是清單與例句的捲動。
 
 ### 2.4 Revision → Records（記錄）
 
@@ -137,7 +155,57 @@ python3 -m http.server 8000
 
 - 目前版本（Android 版直接讀取 APK 的 `versionName`）
 - **Definition in Chinese**：繁體 / 簡體切換，卡片、Quiz 選項與例句譯文都會即時跟著切換
+- **App skin**：外觀選擇器（見第 2.8 節）
+- **User guide**：使用說明按鈕，開啟後可切換**繁體中文 / 简体中文**（見第 2.9 節）
 - **Updates**：見第 5.2 節「App 內更新檢查」
+
+### 2.8 App skin（外觀）
+
+v1.9 內建**兩款外觀**，在 **App info → App skin** 切換，選擇會記在 `settings.skin`：
+
+| skin | 樣子 | 說明 |
+|---|---|---|
+| **Classic** | 經典藍 | 從 1.0 到現在的樣子，預設值 |
+| **Gothic** | 灰底 + 黑白銀 | 頁面底色是**灰色** `#3A3A3A`，卡片、面板、底部抽屜都是近黑色 `#1B1B1B` 的**獨立色塊**，因此各板塊之間一眼分得開；卡片**不投影，改成四周泛光**。文字與線條走銀灰階，只有 App bar 右上那把劍保留原本的紅色作為點綴 |
+
+Gothic 另外換掉了這些（規則見下表 `icons` / `wordmarkImage` / `appbarImage` / `appIcon`）：
+四個頁面標題圖示、底部頁籤圖示、最上方的 App 名稱、App bar 右上的裝飾圖，以及 App 圖示
+（網頁 favicon 與 **Android 桌面圖示**都會換）。哪裡出現該圖示就換哪裡，
+頁面標題與底部頁籤是同一組圖示，兩處都換。
+
+一個 skin 是一份設定表（`build/skin.js` 的 `SKINS`），可以控制：
+
+| 欄位 | 作用 |
+|---|---|
+| `vars` | 覆寫 CSS 自訂-properties：主色、強調色、底色、卡片色、文字色、圓角、陰影、highlight 色、頁籤列配色⋯（可用變數見 `SKIN_VARS`） |
+| `icons` | 四個頁面標題與底部頁籤的圖示（`discover` / `mine` / `records` / `quiz`），未列出的沿用內建圖示 |
+| `wordmark` / `wordmarkImage` | App 最上方「LexiCards」的字體（`--brand-font` 等）或直接換成圖片 |
+| `appbarImage` | App bar 右側那塊空白（見你的截圖）的圖片 |
+| `themeColor` / `androidStatus` / `androidNav` | 瀏覽器、Android 狀態列與導覽列的顏色 |
+| `appIcon` | App 圖示（網頁 favicon） |
+
+選擇會記在 `settings.skin`，重開 App 仍生效；切換時會先清除上一個 skin 的
+所有覆寫，**不會互相殘留**。
+
+Gothic 的圖像素材放在 `build/skins/gothic/`（原始檔 `source/`、處理後 `out/`），
+`make.py` 會把黑背景抠成透明、縮成 App 需要的尺寸，並輸出 `build/skin_gothic.js`
+（base64 data URI）與 Android 的桌面圖示／啟動圖資源；**改圖請改 source 再重跑腳本**。
+
+> **Android 桌面圖示**：已裝好的 App 不能就地改桌面圖示，所以 manifest 裡放了兩個
+> launcher `activity-alias`（`LauncherClassic` 預設啟用、`LauncherGothic` 預設停用），
+> 切換 skin 時由 `LexiNative.setLauncherIcon()` 用 `PackageManager` 啟用其中一個、
+> 停用另一個（`DONT_KILL_APP`，App 不會被關掉）；狀態列與導覽列則由
+> `LexiNative.setSystemBars()` 一起換色。兩者都對 classic 也會執行，所以切回去也會復原。
+
+### 2.9 User guide（使用說明）
+
+**App info → User guide → Open the guide** 會彈出完整說明書，涵蓋十一個主題：
+四個頁面、Discover 的看卡與發音、存檔手勢、Records 管理、Quiz、中文繁簡、
+外觀、資料與備份、更新、Android 與桌機操作、以及幾個小提示。
+
+說明書自己有語言切換（**繁體中文 / 简体中文**），跟「Definition in Chinese」是**兩個獨立設定**：
+你可以讓卡片用繁體、說明書看簡體。內文寫在 `build/guide.js`，只寫一份繁體，
+切到簡體時用 App 內同一張繁簡對照表即時轉換，所以說明書與卡片不會對同一個字有不同結果。
 
 ---
 
@@ -297,7 +365,7 @@ Release 的資產檔名固定為 `LexiCards.apk`，App 的更新檢查就是抓�
 ```bash
 cd build
 python3 build.py      # 合併零件 → ../index.html，並檢查 JS 語法、HTML id 對照、重複宣告
-python3 smoke.py      # headless Chromium 跑 100 項功能測試（手勢、拖放、Quiz、API fallback），輸出截圖
+python3 smoke.py      # headless Chromium 跑 224 項功能測試（手勢、拖放、Quiz、API fallback、外觀），輸出截圖
 python3 shots.py      # 產生 Records / Quiz 畫面截圖（/tmp/shot-*.png）
 python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始資料，見 6.3）
 ```
@@ -323,9 +391,12 @@ python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始�
 | `build/entry.js` | 新增 / 編輯詞語面板 |
 | `build/quiz.js`、`build/quiz2.js` | 測驗出題與畫面 |
 | `build/data.js` | 設定、匯出 / 匯入、備份還原、App info 面板 |
+| `build/guide.js` | 使用說明（繁中撰寫，即時轉簡中）與它的語言切換 |
 | `build/update.js` | App 內更新檢查（GitHub Release ＋ `version.json` 備援） |
 | `build/nav.js`、`build/init.js` | 頁籤導覽與啟動流程 |
-| `build/smoke*.py`／`build/smoke_*.js` | 123 項功能測試 |
+| `build/skin.js`、`build/skin_gothic.js` | 外觀系統：`SKINS` 設定表、套用 / 清除、選擇器；Gothic 的圖像（base64） |
+| `build/skins/gothic/` | Gothic 素材：`source/` 原圖、`out/` 成品、`make.py` 生成腳本 |
+| `build/smoke*.py`／`build/smoke_*.js` | 224 項功能測試 |
 | `build/shots.py` | 畫面截圖腳本 |
 | `build/make_data.py` | 內建詞彙表的資料管線 |
 | `version.json` | 目前版本與 APK 下載網址（更新檢查的備援來源） |
@@ -424,6 +495,56 @@ https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v1.7/LexiCards.apk
 ---
 
 ## 9. 修訂紀錄
+
+### v2.0
+
+| # | 修掉什麼 / 做了什麼 | 原因 |
+|---|---|---|
+| 1 | **第一個真實 skin：Gothic** | App info → App skin 可切換並存檔。**背景改成灰色**（`#3A3A3A`），卡片、面板、底部抽屜是獨立的近黑色塊，板塊之間一眼分得開；卡片**不投影、改成四周泛光**；四個頁面圖示（頁面標題與底部頁籤兩處）、App 名稱、App bar 右上那把劍、favicon 與 **Android 桌面圖示**全部換成 Gothic 素材，字標與劍都放大、劍可以突出 app bar 一點，而劍上的紅色保留下來當點綴 |
+| 2 | **App 內建使用說明** | **App info → User guide** 彈出完整說明書（十一個主題：四頁、換卡與發音、存檔手勢、Records、Quiz、繁簡、外觀、備份、更新、Android 與桌機操作、小提示），並可切換 **繁體中文 / 简体中文**。說明書的語言是**獨立設定**，可以讓卡片用繁體、說明書看簡體 |
+| 3 | 切換外觀不再會留下上一套的顏色 | skin 的變數原本是逐一寫在 `<html>` 的行內樣式上，靠 90 次屬性變更去失效整棵樹；改成**一條以 `data-skin` 為選擇器的樣式表規則**，換掉了就等於整條換掉，任何引擎都一次重繪完成。素材管線也改成直接讀 skin 表裡的色碼產生 Android 啟動畫面與系統列顏色，兩邊不會再各寫一份而漂移 |
+
+> 測試：headless Chromium 功能測試由 **189 項增加到 224 項**。新增項目包含
+> 外觀的灰階檢查（走訪整張 skin 表）、灰色背景與板塊對比、全 App 逐元素「零彩色」
+> 掃描，以及使用說明的開啟、繁簡切換與持久化。
+
+### v1.9
+
+| # | 修掉什麼 / 做了什麼 | 原因 |
+|---|---|---|
+| 1 | **Records 與 Quiz 兩頁可以滑動換頁了** | 這兩頁的內容是一個**直向捲動容器**（`#recordsList` 與 `.quiz`）。觸控落在捲動容器上時，瀏覽器預設（`touch-action:auto`）會自行判斷這個手勢是不是捲動，於是**把水平拖曳吃掉、送出 `pointercancel`**，換頁的程式從此收不到後續事件（`pagerMove` 只跑了 1 次就結束）。容器補上 `touch-action:pan-y`——跟 `.card__scroller` 一開始就有的一樣——之後，直向捲動保留、水平拖曳交還給換頁 |
+| 2 | **換頁所需的滑動幅度調低** | 原本要拖超過寬度 **28%** 才換頁，手機上像在做工。改為 **18%**，並加上**快速輕掃**：速度超過 `SWIPE_VELOCITY`（與卡片滑動手勢同一組門檻）且位移 > 24px 也能換頁，短而快的撥動不會再有「怎麼沒反應」的感覺 |
+| 3 | **底部頁籤的高亮會跟著換頁移動** | 高亮原本只寫在 `:hover` 上；觸控裝置點一下之後 `:hover` 會**卡住**，高亮就留在最後被點的那個頁籤，跟畫面上的頁面對不起來。現在高亮綁在 `.is-active`（跟著選取頁跑），`:hover` 用 `@media (hover:hover)` 包住，只有真正的滑鼠才觸發 |
+
+> 測試：headless Chromium 功能測試由 **193 項增加到 199 項**。
+> 新增的 6 項分別釘住：三個頁面捲動容器的 `touch-action` 算出來必須是 `pan-y`、
+> 換頁門檻必須 ≤ 0.2、從 Records 的**真實列**（而不是 pager 本身）拖曳要能換頁、
+> 短促輕掃要能換頁、以及高亮必須在 `.is-active` 頁籤上並隨換頁移動。
+>
+> 第 1 點是**用真實觸控**重現才找到的：功能測試把合成事件直接丟在 `#pager` 上，
+> 瀏覽器永遠不會取消它，所以舊測試全綠也照樣漏掉這個 bug；改用 CDP
+> `Input.dispatchTouchEvent` 送出真正的觸控後，`pointercancel` 立刻現形。
+
+### v1.8
+
+| # | 修掉什麼 / 做了什麼 | 原因 |
+|---|---|---|
+| 1 | **例句中文高亮**：剩下沒 highlight 的例句現在也會標出來 | 比對時只拿**第一個**中文釋義去找，比不到就整句不標。現在會把**所有義項**都拿來比；真的完全沒有共同字時（例如 `hike` 的釋義是「徒步旅行」，但譯文寫成「明天我們要去**健行**」），再用**該詞在英文例句中的位置**推估它在中文裡的位置，取最合理的一個詞。沒有任何關聯時仍然不標，寧可不高亮也不要標錯 |
+| 2 | **主選單改到下方**，並改成**左右滑動換頁** | 原本 Dictionary / Revision 在右上角，副頁還要再點一次。現在是 Discover → My Cards → Records → Quiz 四頁平鋪，滑動或點底部頁籤都能換頁 |
+| 3 | **每個頁面標題旁都有圖示** | 字典書本、卡片、清單、問號；底部頁籤用同一組圖示 |
+| 4 | 修掉頁面在底部頁籤列**下方漏出**、換頁時**卡片被壓成窄條**的版面問題 | 換頁改成 track 之後，track 的高度百分比沒有依據、頁面寬度又被 flex 縮走 |
+
+> 測試：headless Chromium 功能測試由 **137 項增加到 189 項**。
+> 新增項目包含滑動換頁、頁面圖示、頁籤列、版面幾何斷言、外觀切換與高亮比對；
+> 其中「版面幾何」是實際量測頁面寬高與捲動範圍——純看 class 與文字的測試
+> 抓不到卡片被壓扁這種問題。
+
+### v1.7
+
+| # | 修掉什麼 | 原因 |
+|---|---|---|
+| 1 | 翻譯速度 | 中國大陸常見 Google 不可連線時，例句高亮要等逾 4 秒；改為多引擎競速 + 350ms 對沖，實測降至約 360ms |
+| 2 | 更新檢查 | GitHub 在大陸常被封鎖；改為 GitHub API / raw / jsDelivr 三個 CDN 同時問，先回先贏 |
 
 ### v1.6
 

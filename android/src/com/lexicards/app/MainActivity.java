@@ -2,14 +2,19 @@ package com.lexicards.app;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowInsetsController;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -56,7 +61,7 @@ public class MainActivity extends Activity {
             try {
                 return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
             } catch (Exception e) {
-                return "1.6";
+                return "1.8";
             }
         }
 
@@ -122,6 +127,61 @@ public class MainActivity extends Activity {
             });
         }
 
+        /* A skin can repaint the system bars to match its own colours.  The web
+           side passes the status-bar colour, the navigation-bar colour and
+           whether the navigation bar wants dark glyphs (a white bar does).
+           Both bars are painted on every skin change, classic included, or the
+           colour of the last skin would stay behind. */
+        @JavascriptInterface
+        public void setSystemBars(final String statusHex, final String navHex, final boolean navLight) {
+            final String status = hexColor(statusHex);
+            final String nav = hexColor(navHex);
+            if (status == null && nav == null) return;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        Window window = getWindow();
+                        if (status != null) window.setStatusBarColor(Color.parseColor(status));
+                        if (nav != null) window.setNavigationBarColor(Color.parseColor(nav));
+                        /* the status bar always carries white glyphs in both
+                           skins, so only the navigation-bar flag can change */
+                        setBarIconAppearance(window, false, navLight);
+                    } catch (Throwable ignored) {
+                    }
+                }
+            });
+        }
+
+        /* kept for older hosts that only know the status bar */
+        @JavascriptInterface
+        public void setThemeColor(final String hex) {
+            setSystemBars(hex, null, true);
+        }
+
+        /* The home-screen icon comes from the manifest, so a skin cannot
+           repaint it in place: every skin owns an activity-alias and exactly
+           one of them is enabled.  The web side calls this on every applySkin,
+           classic included, so the alias and the chosen skin never drift. */
+        @JavascriptInterface
+        public void setLauncherIcon(final String skin) {
+            final boolean gothic = "gothic".equals(skin);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    /* enable the wanted one first, so the app never sits with
+                       no launcher entry at all */
+                    if (gothic) {
+                        setAliasEnabled("LauncherGothic", true);
+                        setAliasEnabled("LauncherClassic", false);
+                    } else {
+                        setAliasEnabled("LauncherClassic", true);
+                        setAliasEnabled("LauncherGothic", false);
+                    }
+                }
+            });
+        }
+
         @JavascriptInterface
         public void speak(final String text) {
             runOnUiThread(new Runnable() {
@@ -147,10 +207,72 @@ public class MainActivity extends Activity {
         }
     }
 
+    /* a #RRGGBB string, or null when the argument is not one */
+    private static String hexColor(String value) {
+        if (value == null) return null;
+        String v = value.trim();
+        return v.matches("#[0-9a-fA-F]{6}") ? v : null;
+    }
+
+    /* enable / disable one launcher alias (DONT_KILL_APP: the app keeps
+       running, only the home-screen entry changes) */
+    private void setAliasEnabled(String alias, boolean enable) {
+        try {
+            ComponentName cn = new ComponentName(this, getPackageName() + "." + alias);
+            getPackageManager().setComponentEnabledSetting(cn,
+                enable ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                       : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP);
+        } catch (Throwable ignored) {
+            /* a host without the alias simply keeps the icon it has */
+        }
+    }
+
+    private boolean isAliasEnabled(String alias) {
+        try {
+            ComponentName cn = new ComponentName(this, getPackageName() + "." + alias);
+            return getPackageManager().getComponentEnabledSetting(cn)
+                == PackageManager.COMPONENT_ENABLED_STATE_ENABLED;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /* dark or light glyphs in the system bars.  WindowInsetsController is the
+       modern way; the flags below it are what API 24..29 understands. */
+    private void setBarIconAppearance(Window window, boolean statusLight, boolean navLight) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController c = window.getInsetsController();
+            if (c != null) {
+                c.setSystemBarsAppearance(
+                    statusLight ? WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS : 0,
+                    WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
+                c.setSystemBarsAppearance(
+                    navLight ? WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS : 0,
+                    WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS);
+            }
+            return;
+        }
+        View decor = window.getDecorView();
+        int flags = decor.getSystemUiVisibility();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags = statusLight ? (flags | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR)
+                                : (flags & ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            flags = navLight ? (flags | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR)
+                             : (flags & ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        }
+        decor.setSystemUiVisibility(flags);
+    }
+
     @Override
     @SuppressLint("SetJavaScriptEnabled")
     protected void onCreate(Bundle savedInstanceState) {
-        setTheme(R.style.AppTheme);
+        /* The launcher alias that started the app is the skin that was chosen
+           last time, so the window behind the WebView is painted the right
+           colour before a single line of JavaScript has run. */
+        setTheme(isAliasEnabled("LauncherGothic") ? R.style.GothicTheme : R.style.AppTheme);
         super.onCreate(savedInstanceState);
 
         initTTS(null);

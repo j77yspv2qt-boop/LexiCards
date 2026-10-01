@@ -100,7 +100,9 @@ function warmDeck() {
 function applyMeaningPatch(m) {
   if (!m || !m.term) return;
   const key = normKey(m.term);
-  $$('#stage .card').forEach(el => {
+  /* both card stages, so a card patched while it is off screen is already
+     right when the user swipes back to it */
+  $$('#stage .card, #stageMine .card').forEach(el => {
     const d = el._descriptor;
     if (!d || normKey(d.term) !== key) return;
     const block = $('[data-defzh]', el);
@@ -127,19 +129,18 @@ function applyMeaningPatch(m) {
       }
       /* keep the highlight: this line used to be plain text, which is why the
          word was lit up in the English sentence but never in the Chinese one */
-      zhEl.innerHTML = markZhHits(displayZh(m.exampleZh), displayZh((m.zh && m.zh.length) ? m.zh[0] : ''));
+      zhEl.innerHTML = exampleZhHTML(m);
     } else if (!exBlock && m.example) {
       /* the example itself only turned up now (a cached entry that had none, or
          a slow sentence lookup) - draw the block instead of dropping it */
       const scroller = $('[data-scroller]', el);
       if (scroller) {
-        const gloss = (m.zh && m.zh.length) ? m.zh[0] : '';
         const block = document.createElement('div');
         block.className = 'defblock defblock--example';
         block.setAttribute('data-example', '');
         block.innerHTML = '<div class="defblock__label defblock__label--en">Example Sentence</div>' +
           '<div class="card__example">' + markHits(m.example, m.term) + '</div>' +
-          (m.exampleZh ? '<div class="card__example-zh">' + markZhHits(displayZh(m.exampleZh), displayZh(gloss)) + '</div>' : '');
+          (m.exampleZh ? '<div class="card__example-zh">' + exampleZhHTML(m) + '</div>' : '');
         scroller.appendChild(block);
       }
     }
@@ -148,20 +149,20 @@ function applyMeaningPatch(m) {
 
 /* ---------------------------- stack rendering ---------------------------- */
 function renderStack() {
-  const stage = $('#stage');
+  const stage = dictStage();
   if (!stage) return;
   $$('.card', stage).forEach(c => c.remove());
-  const empty = $('#stageEmpty');
+  const empty = dictStageEmpty();
   const cards = currentCards(3);
 
   if (!cards.length) {
     if (empty) {
       empty.hidden = false;
       empty.innerHTML = state.dictSub === 'mine'
-        ? '<div><strong style="color:#0D47A1;display:block;margin-bottom:6px">No saved cards yet</strong>' +
+        ? '<div><strong style="color:var(--primary-dark,#0D47A1);display:block;margin-bottom:6px">No saved cards yet</strong>' +
           'Drag the bottom handle of a card onto the save panel,<br>' +
           'or add entries from Revision &rarr; Records.</div>'
-        : '<div><strong style="color:#0D47A1;display:block;margin-bottom:6px">Deck is empty</strong>' +
+        : '<div><strong style="color:var(--primary-dark,#0D47A1);display:block;margin-bottom:6px">Deck is empty</strong>' +
           'Try another filter, or add your own terms with &ldquo;My list&rdquo;.</div>';
     }
     updateProgress();
@@ -190,10 +191,13 @@ onMeaningPatch(applyMeaningPatch);
 
 function updateProgress() {
   const p = progressLabel();
-  const pos = $('#dictPos'), fill = $('#dictFill'), mode = $('#dictMode');
+  const mine = state.dictSub === 'mine';
+  const pos = $(mine ? '#dictPosMine' : '#dictPos');
+  const fill = $(mine ? '#dictFillMine' : '#dictFill');
+  const mode = $(mine ? '#dictModeMine' : '#dictMode');
   if (pos) pos.textContent = p.pos + ' / ' + p.total;
   if (fill) fill.style.width = p.pct + '%';
-  if (mode) mode.textContent = state.dictSub === 'mine' ? 'My Cards' : 'Discover';
+  if (mode) mode.textContent = mine ? 'My Cards' : 'Discover';
 }
 
 /* ------------------------------- animations ------------------------------- */

@@ -1,9 +1,16 @@
 /* =====================================================================
    Dictionary page controller (Discover / My Cards)
    ===================================================================== */
+/* Discover and My Cards are two pages of the same track, each with its own
+   card stage, its own progress row and its own search box.  These helpers pick
+   the ones belonging to the page the user is on. */
+function dictStage() { return $(state.dictSub === 'mine' ? '#stageMine' : '#stage'); }
+function dictStageEmpty() { return $(state.dictSub === 'mine' ? '#stageEmptyMine' : '#stageEmpty'); }
+function dictSearchInput() { return $(state.dictSub === 'mine' ? '#searchMine' : '#searchDiscover'); }
+
 function setDictSub(sub) {
   state.dictSub = sub;
-  $$('#dictSeg .seg').forEach(b => b.classList.toggle('is-active', b.dataset.sub === sub));
+  setPage(sub);
   rebuildDeck();
 }
 
@@ -13,12 +20,6 @@ function rebuildDeck() {
 }
 
 function initDictionary() {
-  const seg = $('#dictSeg');
-  if (seg) seg.addEventListener('click', e => {
-    const btn = e.target.closest('.seg');
-    if (btn && btn.dataset.sub) setDictSub(btn.dataset.sub);
-  });
-
   const filter = $('#filterLevel');
   if (filter) filter.addEventListener('change', () => { state.filter = filter.value; rebuildDeck(); });
 
@@ -31,9 +32,8 @@ function initDictionary() {
   const listBtn = $('#btnCustomList');
   if (listBtn) listBtn.addEventListener('click', openCustomSheet);
 
-  /* delegate the Retry button and Speak button inside a card */
-  const stage = $('#stage');
-  if (stage) {
+  /* the Retry button and the Speak button inside a card, on both stages */
+  $$('#stage, #stageMine').forEach(stage => {
     function handleSpeak(e) {
       const speakBtn = e.target.closest('[data-speak]');
       if (!speakBtn) return;
@@ -50,21 +50,22 @@ function initDictionary() {
       const speakBtn = e.target.closest('[data-speak]');
       if (speakBtn) { handleSpeak(e); return; }
       const btn = e.target.closest('[data-retry]');
-    if (!btn) return;
-    const card = btn.closest('.card');
-    if (!card) return;
-    const idx = $$('.card', stage).indexOf(card);
-    const descriptor = currentCards(3)[idx];
-    if (descriptor) hydrateCard(card, descriptor, true);
+      if (!btn) return;
+      const card = btn.closest('.card');
+      if (!card) return;
+      const idx = $$('.card', stage).indexOf(card);
+      const descriptor = currentCards(3)[idx];
+      if (descriptor) hydrateCard(card, descriptor, true);
+    });
+    stage.addEventListener('pointerup', e => {
+      if (e.target.closest('[data-speak]')) handleSpeak(e);
+    });
   });
-  stage.addEventListener('pointerup', e => {
-    if (e.target.closest('[data-speak]')) handleSpeak(e);
-  });
-  }
 
-  /* search input for instant lookup */
-  const searchInput = $('#searchDiscover');
-  if (searchInput) {
+  /* instant lookup, from either search box */
+  ['#searchDiscover', '#searchMine'].forEach(sel => {
+    const searchInput = $(sel);
+    if (!searchInput) return;
     searchInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         const val = searchInput.value.trim();
@@ -74,7 +75,7 @@ function initDictionary() {
         lookupInstantTerm(val);
       }
     });
-  }
+  });
 
   /* desktop shortcuts: arrows flip, S saves, R reshuffles */
   document.addEventListener('keydown', e => {
@@ -91,7 +92,7 @@ function initDictionary() {
 }
 
 function saveCurrentCard() {
-  const top = $('.card--top', $('#stage'));
+  const top = $('.card--top', dictStage());
   if (!top) return;
   saveDescriptorToRecords(top._descriptor, top);
 }

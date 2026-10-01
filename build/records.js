@@ -44,7 +44,7 @@ function recordItemHTML(r) {
 
         (zh.length
           ? '<div class="item__zh">' + zh.map(z => escapeHTML(displayZh(z))).join(' &middot; ') + '</div>'
-          : '<div class="item__zh" style="color:#9FB2CB">No Chinese meaning yet - tap to add</div>') +
+          : '<div class="item__zh" style="color:var(--placeholder,#9FB2CB)">No Chinese meaning yet - tap to add</div>') +
         (en.length ? '<div class="item__en">' + escapeHTML(en[0]) + '</div>' : '') +
         '<div class="item__meta">' +
           '<span>' + (stats.seen ? stats.seen + ' reviews' : 'Not reviewed yet') + '</span>' +

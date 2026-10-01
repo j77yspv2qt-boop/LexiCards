@@ -16,7 +16,7 @@ const LS_KEYS = {
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '1.7';
+const APP_VERSION = '2.0';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */
@@ -26,7 +26,8 @@ const DEFAULT_SETTINGS = {
   autoNextDelayMs: 850,
   strictQuiz: false,
   quizScope: 'records',            /* what the Quiz draws questions from */
-  quizTricky: true                 /* build the wrong options from confusable words */
+  quizTricky: true,                /* build the wrong options from confusable words */
+  skin: 'classic'                  /* the look: colours, icons, wordmark, app icon */
 };
 
 

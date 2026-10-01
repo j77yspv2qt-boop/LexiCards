@@ -24,10 +24,12 @@ function nativeDescribe() {
 
 /* Android hardware / gesture back button: close a sheet first, step back one
    level inside the app, and only then let Android leave the app. */
+/* the pages run Discover -> My Cards -> Records -> Quiz, so "back" walks one
+   step up that list and leaves the app from the first page */
 window.lexiHandleBack = function () {
   if ($('.sheet.is-open')) { closeAllSheets(); return true; }
-  if (state.view !== 'dictionary') { setView('dictionary'); return true; }
-  if (state.dictSub !== 'discover') { setDictSub('discover'); return true; }
+  const i = pageIndex(state.page);
+  if (i > 0) { setPage(PAGES[i - 1].id); return true; }
   return false;
 };
 

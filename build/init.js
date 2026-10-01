@@ -21,11 +21,14 @@ function initGlobalGuards() {
 function init() {
   loadAll();
   state.view = 'dictionary';
+  state.page = 'discover';
   state.deck = [];
   state.deckIndex = 0;
   state.round = newRound();
-  document.body.setAttribute('data-revsub', 'records');
+  document.body.setAttribute('data-revsub', '');
+  document.body.setAttribute('data-page', 'discover');
 
+  initSkins();
   initNav();
   initDictionary();
   initRecords();
@@ -38,8 +41,7 @@ function init() {
 
   setEntryType('word');
   syncSettingsUI();
-  setView('dictionary');
-  setRevSub('records');
+  setPage('discover');
   rebuildDeck();
   refreshRecords();
   updateQuizStats();

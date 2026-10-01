@@ -286,6 +286,44 @@
     closeSheet('sheetInfo');
     step('app info sheet closes', !infoSheet.classList.contains('is-open'));
 
+    /* ---- 11c. the user guide, and its own language switch ---- */
+    step('guide: App info offers the guide', !!document.getElementById('btnGuide'));
+    document.getElementById('btnGuide').click();
+    await wait(150);
+    var guideSheet = document.getElementById('sheetGuide');
+    step('guide: the button opens the guide sheet', guideSheet.classList.contains('is-open'));
+    step('guide: it opens in Traditional Chinese',
+      document.getElementById('guideTitle').textContent === '使用說明' &&
+      document.getElementById('guideBody').textContent.indexOf('四個頁面') > 0,
+      document.getElementById('guideTitle').textContent);
+    step('guide: every section and its bullets are rendered', (function () {
+      var secs = document.querySelectorAll('#guideBody .guide__sec');
+      var items = document.querySelectorAll('#guideBody li');
+      return secs.length >= 8 && items.length >= 20;
+    })(), document.querySelectorAll('#guideBody .guide__sec').length + ' sections, ' +
+      document.querySelectorAll('#guideBody li').length + ' bullets');
+    var tradGuide = document.getElementById('guideBody').textContent;
+    document.querySelector('#guideLangSeg .seg[data-guide-lang="simplified"]').click();
+    await wait(150);
+    var simpGuide = document.getElementById('guideBody').textContent;
+    step('guide: 简体中文 rerenders the same guide in simplified characters',
+      document.getElementById('guideTitle').textContent === '使用说明' &&
+      simpGuide.indexOf('四个页面') > 0 && simpGuide !== tradGuide,
+      document.getElementById('guideTitle').textContent);
+    step('guide: the guide language is remembered on its own',
+      state.settings.guideLang === 'simplified' &&
+      JSON.parse(localStorage.getItem('lexi.settings.v1')).guideLang === 'simplified',
+      state.settings.guideLang);
+    step('guide: reading the guide in simplified leaves the cards in Traditional',
+      state.settings.definitionLang === 'traditional' && displayZh('習慣') === '習慣',
+      state.settings.definitionLang);
+    document.querySelector('#guideLangSeg .seg[data-guide-lang="traditional"]').click();
+    closeSheet('sheetGuide');
+    step('guide: switching back to Traditional and closing works',
+      !guideSheet.classList.contains('is-open') &&
+      document.getElementById('guideTitle').textContent === '使用說明',
+      document.getElementById('guideTitle').textContent);
+
     /* ---- 12. drag-handle simulation (pointer events) ---- */
     setDictSub('discover');
     await wait(150);
@@ -455,6 +493,513 @@
     step('app info names the newer release',
       /9\.9/.test(document.getElementById('updateInfo').textContent),
       document.getElementById('updateInfo').textContent);
+
+    /* ---- 15. v1.8: the four pages, the swipe, the tab bar and the icons ---- */
+
+    /* the navigation moved out of the app bar and into a bottom tab bar */
+    step('pages: the old Dictionary/Revision pill is gone from the app bar',
+      !document.querySelector('.appbar .maintabs') &&
+      !document.getElementById('dictSeg') && !document.getElementById('revSeg'));
+    step('pages: the tab bar carries all four pages',
+      document.querySelectorAll('#mainTabs .tabbar__btn').length === 4,
+      document.querySelectorAll('#mainTabs .tabbar__btn').length);
+    step('pages: the tab bar is below the content, not in the app bar',
+      !!document.querySelector('.tabbar') && !document.querySelector('.appbar .tabbar'));
+
+    /* every page title has an icon, and the tab bar repeats the same four */
+    step('pages: every page title has an icon',
+      ['discover', 'mine', 'records', 'quiz'].every(function (p) {
+        var el = document.querySelector('.pagehead__icon[data-pageicon="' + p + '"]');
+        return !!el && el.querySelector('svg') !== null;
+      }), document.querySelectorAll('.pagehead__icon svg').length + ' title icons drawn');
+    step('pages: every tab carries an icon too',
+      document.querySelectorAll('#mainTabs .tabbar__icon svg').length === 4,
+      document.querySelectorAll('#mainTabs .tabbar__icon svg').length);
+    step('pages: the four page titles are named',
+      ['Discover', 'My Cards', 'Records', 'Quiz'].every(function (label) {
+        return Array.prototype.some.call(document.querySelectorAll('.pagehead__title'),
+          function (el) { return el.textContent.trim() === label; });
+      }), Array.prototype.map.call(document.querySelectorAll('.pagehead__title'),
+        function (el) { return el.textContent.trim(); }).join(' / '));
+
+    /* the swipe moves between the pages, in order */
+    step('pages: the app starts on Discover',
+      state.page === 'discover' &&
+      document.getElementById('view-discover').classList.contains('is-active'));
+    var pagerEl = document.getElementById('pager');
+    var pagerBox = pagerEl.getBoundingClientRect();
+    /* a drag on the page head, clear of the card stack (the card owns its own
+       horizontal swipe for next / previous) */
+    function swipe(fromX, toX) {
+      var y = pagerBox.top + 8;
+      function fire(type, x) {
+        pagerEl.dispatchEvent(new PointerEvent(type, {
+          bubbles: true, cancelable: true, pointerId: 31, pointerType: 'touch',
+          isPrimary: true, clientX: x, clientY: y
+        }));
+      }
+      fire('pointerdown', fromX);
+      fire('pointermove', (fromX + toX) / 2);
+      fire('pointermove', toX);
+      fire('pointerup', toX);
+    }
+    var L = pagerBox.left, W = pagerBox.width;
+    swipe(L + W - 30, L + 30);
+    await wait(420);
+    step('pages: swiping left moves Discover -> My Cards',
+      state.page === 'mine' && document.getElementById('view-mine').classList.contains('is-active'), state.page);
+    swipe(L + W - 30, L + 30);
+    await wait(420);
+    step('pages: swiping again moves My Cards -> Records', state.page === 'records', state.page);
+    swipe(L + W - 30, L + 30);
+    await wait(420);
+    step('pages: Records -> Quiz is the last step of the swipe', state.page === 'quiz', state.page);
+    var beforeQuiz = state.page;
+    swipe(L + W - 30, L + 30);
+    step('pages: the swipe cannot go past the last page', state.page === beforeQuiz, state.page);
+    swipe(L + 30, L + W - 30);
+    await wait(420);
+    step('pages: swiping right walks back', state.page === 'records', state.page);
+
+    /* a short drag snaps back instead of turning the page */
+    swipe(L + W - 30, L + W - 70);
+    await wait(420);
+    step('pages: a short drag snaps back to the same page', state.page === 'records', state.page);
+
+    /* the tab bar follows the swipe, and tapping it jumps */
+    step('pages: the tab bar marks the current page',
+      document.querySelector('#mainTabs .tabbar__btn.is-active').getAttribute('data-page') === 'records',
+      document.querySelector('#mainTabs .tabbar__btn.is-active').getAttribute('data-page'));
+    document.querySelector('#mainTabs .tabbar__btn[data-page="discover"]').click();
+    await wait(420);
+    step('pages: tapping a tab jumps straight to that page', state.page === 'discover', state.page);
+    step('pages: the track is parked on the current page',
+      /translate3d\(0%/.test(document.getElementById('pagerTrack').style.transform),
+      document.getElementById('pagerTrack').style.transform);
+
+    /* Each page has to LAND INSIDE the pager.  Checking the transform string
+       only proves something on page one, where every formula returns 0% - so
+       here every page is walked and its real box is compared with the pager.
+       A track offset expressed in the wrong unit still reads as a valid
+       transform and passes a string match, but parks the page off screen. */
+    (async function () {
+      var pagerL = document.getElementById('pager').getBoundingClientRect().left;
+      for (var _i = 0; _i < 4; _i++) {
+        var id = ['discover', 'mine', 'records', 'quiz'][_i];
+        setPage(id);
+        await wait(420);
+        var r = document.getElementById('view-' + id).getBoundingClientRect();
+        step('layout: ' + id + ' lands inside the pager', Math.abs(r.left - pagerL) < 2 && r.width > 0,
+          'left ' + Math.round(r.left - pagerL) + 'px, width ' + Math.round(r.width) + 'px, track ' +
+          document.getElementById('pagerTrack').style.transform);
+      }
+      setPage('discover');
+      await wait(420);
+    })();
+    await wait(2000);
+
+    /* The pages have to actually FILL the pager and be as wide as the window -
+       a page that collapses still passes every class and text check above, so
+       the geometry is asserted here. */
+    (function () {
+      var pagerBox = document.getElementById('pager').getBoundingClientRect();
+      var track = document.getElementById('pagerTrack').getBoundingClientRect();
+      var view = document.getElementById('view-discover').getBoundingClientRect();
+      var stageBox = document.getElementById('stage').getBoundingClientRect();
+      var tab = document.querySelector('.tabbar').getBoundingClientRect();
+      step('layout: the track fills the pager height', Math.abs(track.height - pagerBox.height) < 2,
+        'track ' + Math.round(track.height) + ' vs pager ' + Math.round(pagerBox.height));
+      step('layout: the track is four pages wide', Math.abs(track.width - pagerBox.width * 4) < 2,
+        'track ' + Math.round(track.width) + ' vs 4x' + Math.round(pagerBox.width));
+      step('layout: a page is one window wide', Math.abs(view.width - pagerBox.width) < 2,
+        'page ' + Math.round(view.width) + ' vs pager ' + Math.round(pagerBox.width));
+      step('layout: the card stage is as wide as the page',
+        stageBox.width > view.width * 0.8, Math.round(stageBox.width) + ' of ' + Math.round(view.width));
+      step('layout: the card stage keeps a usable height', stageBox.height > 200,
+        Math.round(stageBox.height) + 'px');
+      step('layout: the page does not run under the tab bar',
+        view.bottom <= tab.top + 1, 'page ends ' + Math.round(view.bottom) + ', tab bar at ' + Math.round(tab.top));
+      step('layout: the app is exactly one screen tall',
+        Math.abs(document.querySelector('.app').getBoundingClientRect().height - window.innerHeight) < 2,
+        Math.round(document.querySelector('.app').getBoundingClientRect().height) + ' vs ' + window.innerHeight);
+      step('layout: nothing is left scrolling the whole document sideways',
+        document.documentElement.scrollWidth <= window.innerWidth + 1,
+        document.documentElement.scrollWidth + ' vs ' + window.innerWidth);
+    })();
+
+    /* each page keeps its own state, and My Cards renders its own stage */
+    setPage('mine');
+    await wait(260);
+    step('pages: My Cards has its own card stage', document.querySelectorAll('#stageMine .card').length >= 1,
+      document.querySelectorAll('#stageMine .card').length);
+    step('pages: My Cards has its own progress row',
+      /\d+ \/ \d+/.test(document.getElementById('dictPosMine').textContent),
+      document.getElementById('dictPosMine').textContent);
+    setPage('discover');
+    await wait(260);
+    step('pages: going back to Discover keeps its own deck', document.querySelectorAll('#stage .card').length >= 1,
+      document.querySelectorAll('#stage .card').length);
+
+    /* the Android back button walks the same list */
+    setPage('quiz');
+    step('back: the hardware back button steps back one page',
+      window.lexiHandleBack() === true && state.page === 'records', state.page);
+    while (state.page !== 'discover') window.lexiHandleBack();
+    step('back: the first page hands control back to Android', window.lexiHandleBack() === false, state.page);
+
+    /* ---- 15b. the three swipe fixes ---- */
+
+    /* (a) A page-level scroller has to hand the horizontal drag back to the
+       pager.  On a vertical scroller the browser otherwise decides the drag is
+       a scroll, cancels the pointer stream (pointercancel) and the page never
+       turns - which is exactly why Records and Quiz could not be swiped.  The
+       fix is `touch-action:pan-y` on the list and the quiz pane, so this asserts
+       it is actually there (a class/text check would never catch it). */
+    step('swipe fix: every page-level scroller allows pan-y',
+      ['.list', '.quiz', '.card__scroller'].every(function (sel) {
+        var el = document.querySelector(sel);
+        return !!el && getComputedStyle(el).touchAction === 'pan-y';
+      }), ['.list', '.quiz', '.card__scroller'].map(function (sel) {
+        var el = document.querySelector(sel);
+        return el ? getComputedStyle(el).touchAction : 'missing';
+      }).join(' / '));
+
+    /* (b) the drag needed to turn the page was lowered (0.28 -> 0.18) */
+    step('swipe fix: the page-swipe distance was lowered',
+      typeof PAGE_SWIPE_RATIO === 'number' && PAGE_SWIPE_RATIO <= 0.2,
+      'PAGE_SWIPE_RATIO = ' + PAGE_SWIPE_RATIO);
+
+    /* (c) a drag that starts on a real descendant (a records row), not on the
+       pager element itself, still turns the page */
+    setPage('records');
+    await wait(360);
+    (function () {
+      var row = document.querySelector('#recordsList .item');
+      if (!row) return;
+      var b = row.getBoundingClientRect();
+      function fire(type, x) {
+        row.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true,
+          pointerId: 41, pointerType: 'touch', isPrimary: true, clientX: x, clientY: 300 }));
+      }
+      fire('pointerdown', b.right - 20);
+      fire('pointermove', b.left + 20);
+      fire('pointermove', b.left + 2);
+      fire('pointerup', b.left + 2);
+    })();
+    await wait(440);
+    step('swipe fix: a drag that starts on a records row turns the page', state.page === 'quiz', state.page);
+
+    /* (d) a short but quick flick turns the page even without the distance */
+    setPage('records');
+    await wait(360);
+    var flickRow = document.querySelector('#recordsList .item');
+    if (flickRow) {
+      var fb = flickRow.getBoundingClientRect();
+      function fireFlick(type, x) {
+        flickRow.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true,
+          pointerId: 43, pointerType: 'touch', isPrimary: true, clientX: x, clientY: 300 }));
+      }
+      fireFlick('pointerdown', fb.left + 90);
+      await wait(26);
+      fireFlick('pointermove', fb.left + 80);
+      await wait(6);
+      fireFlick('pointermove', fb.left + 40);
+      fireFlick('pointerup', fb.left + 40);
+    }
+    await wait(440);
+    step('swipe fix: a quick short flick turns the page', state.page === 'quiz', state.page);
+
+    /* (e) the tab highlight marks the SELECTED page, so it moves with the page.
+       It used to come from :hover only, which sticks after a tap, so the tint
+       stayed on whatever tab was tapped last.  The colour is read with the
+       transition switched off: headless runs under virtual time, where the CSS
+       transition does not settle, so a plain read would report the value it is
+       transitioning away from. */
+    function settledBg(el) {
+      var prev = el.style.transition;
+      el.style.transition = 'none';
+      var bg = getComputedStyle(el).backgroundColor;
+      el.style.transition = prev;
+      return bg;
+    }
+    setPage('mine');
+    await wait(320);
+    var actTab = document.querySelector('#mainTabs .tabbar__btn.is-active');
+    step('swipe fix: the selected tab carries the highlight',
+      !!actTab && actTab.getAttribute('data-page') === 'mine' &&
+      settledBg(actTab) !== 'rgba(0, 0, 0, 0)',
+      actTab ? actTab.getAttribute('data-page') + ' ' + settledBg(actTab) : 'none');
+    setPage('quiz');
+    await wait(320);
+    var actTab2 = document.querySelector('#mainTabs .tabbar__btn.is-active');
+    var mineTab = document.querySelector('#mainTabs .tabbar__btn[data-page="mine"]');
+    step('swipe fix: the highlight follows the page change',
+      !!actTab2 && actTab2.getAttribute('data-page') === 'quiz' &&
+      settledBg(actTab2) !== 'rgba(0, 0, 0, 0)' &&
+      settledBg(mineTab) === 'rgba(0, 0, 0, 0)',
+      actTab2 ? actTab2.getAttribute('data-page') + ' ' + settledBg(actTab2) : 'none');
+    setPage('discover');
+    await wait(200);
+
+    /* ---- 16. the skin machinery ---- */
+    step('skin: classic and gothic are the two skins that ship', skinIds().join(',') === 'classic,gothic', skinIds().join(','));
+    step('skin: the chosen skin is applied as data-skin on <html>',
+      document.documentElement.getAttribute('data-skin') === 'classic',
+      document.documentElement.getAttribute('data-skin'));
+    step('skin: the picker lists every skin in App info',
+      document.querySelectorAll('#skinPicker .skinopt').length === skinIds().length,
+      document.querySelectorAll('#skinPicker .skinopt').length);
+    step('skin: the current skin is marked in the picker',
+      document.querySelector('#skinPicker .skinopt.is-active').getAttribute('data-skin') === 'classic');
+    step('skin: the wordmark is the one the app bar shows',
+      document.getElementById('brandName').textContent === 'LexiCards',
+      document.getElementById('brandName').textContent);
+    step('skin: the app bar keeps a slot for a skin to fill', !!document.getElementById('appbarSlot'));
+
+    /* ---- 16b. the first real skin: Gothic ---- */
+    /* Gothic is the skin that proves the machinery: it drives every colour to
+       greyscale, replaces all four page icons (page title AND tab bar) with
+       artwork, swaps the wordmark for an image, fills the app bar slot and
+       brings its own favicon. */
+    setSkin('gothic');
+    step('skin: gothic is applied as data-skin on <html>',
+      document.documentElement.getAttribute('data-skin') === 'gothic',
+      document.documentElement.getAttribute('data-skin'));
+    /* every colour the skin controls, not a hand-picked few: the whole table is
+       walked, so a token added to the skin later cannot quietly stay coloured.
+       The list is checked against the skin's own values AND against what the
+       document actually resolved them to. */
+    var nonGrey = (function () {
+      var cs = getComputedStyle(document.documentElement);
+      var vars = SKINS.gothic.vars;
+      for (var name in vars) {
+        var m = String(vars[name]).trim();
+        if (m.charAt(0) !== '#' || m.length !== 7) continue;   /* rgba() tokens are fine */
+        var n = parseInt(m.slice(1), 16);
+        var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+        if (Math.max(r, g, b) - Math.min(r, g, b) > 2) return name + '=' + m;
+        if (cs.getPropertyValue(name).trim() !== m) return name + ' not applied';
+      }
+      return null;
+    })();
+    step('skin: gothic drives every colour token to greyscale', nonGrey === null,
+      nonGrey || 'every hex token is on the grey axis');
+    step('skin: gothic replaces all four page-title icons with artwork', (function () {
+      var list = document.querySelectorAll('.pagehead__icon[data-pageicon]');
+      if (list.length !== 4) return false;
+      for (var i = 0; i < list.length; i++) {
+        var img = list[i].querySelector('img');
+        if (!img || img.getAttribute('src').indexOf('data:image/png;base64,') !== 0) return false;
+      }
+      return true;
+    })(), document.querySelectorAll('.pagehead__icon img').length + ' replaced');
+    step('skin: gothic replaces all four tab-bar icons with artwork', (function () {
+      var list = document.querySelectorAll('.tabbar__icon[data-pageicon]');
+      if (list.length !== 4) return false;
+      for (var i = 0; i < list.length; i++) {
+        var img = list[i].querySelector('img');
+        if (!img || img.getAttribute('src').indexOf('data:image/png;base64,') !== 0) return false;
+      }
+      return true;
+    })(), document.querySelectorAll('.tabbar__icon img').length + ' replaced');
+    step('skin: gothic swaps the wordmark for the chrome lettering', (function () {
+      var img = document.querySelector('#brandName .brand__logo');
+      return !!img && img.getAttribute('src').indexOf('data:image/png;base64,') === 0;
+    })(), document.getElementById('brandName').innerHTML.slice(0, 40));
+    step('skin: gothic fills the app bar slot',
+      !!document.querySelector('#appbarSlot .appbar__slot-img'));
+    step('skin: gothic repaints the browser chrome',
+      document.querySelector('meta[name="theme-color"]').getAttribute('content') === '#1C1C1E',
+      document.querySelector('meta[name="theme-color"]').getAttribute('content'));
+    step('skin: gothic brings its own favicon',
+      document.querySelector('link[rel="icon"]').getAttribute('href').indexOf('data:image/png;base64,') === 0);
+    step('skin: the gothic row is the one marked active in the picker',
+      document.querySelector('#skinPicker .skinopt.is-active').getAttribute('data-skin') === 'gothic');
+    /* the on-screen result: a token nothing consumes would pass every check
+       above and still leave a white page, so measure real elements */
+    step('skin: gothic actually paints the surfaces dark', (function () {
+      function lum(c) {
+        if (c.indexOf('rgb') !== 0) return 999;
+        var p = c.slice(c.indexOf('(') + 1, c.length - 1).split(',');
+        return (Number(p[0]) + Number(p[1]) + Number(p[2])) / 3;
+      }
+      var bar = lum(getComputedStyle(document.querySelector('.tabbar')).backgroundColor);
+      var panel = lum(getComputedStyle(document.querySelector('.sheet__panel')).backgroundColor);
+      return bar < 90 && panel < 90;
+    })(), 'tab bar and sheet panel go black');
+
+    /* The page background has to be a real grey, and the blocks on it have to
+       sit clearly apart from it - that is the point of the skin's background,
+       and a token nothing consumes would still pass every check above. */
+    function greyLum(c) {
+      var s = String(c).trim(), r, g, b;
+      if (s.charAt(0) === '#') {
+        var n = parseInt(s.slice(1), 16);
+        r = (n >> 16) & 255; g = (n >> 8) & 255; b = n & 255;
+      } else if (s.indexOf('rgb') === 0) {
+        var p = s.slice(s.indexOf('(') + 1, s.length - 1).split(',');
+        r = Number(p[0]); g = Number(p[1]); b = Number(p[2]);
+      } else return -1;
+      if (Math.max(r, g, b) - Math.min(r, g, b) > 4) return -1;
+      return (r + g + b) / 3;
+    }
+    step('skin: gothic turns the page background grey, not black',
+      greyLum(getComputedStyle(document.documentElement).getPropertyValue('--bg')) >= 40,
+      getComputedStyle(document.documentElement).getPropertyValue('--bg'));
+    step('skin: gothic keeps the blocks clear of the page background', (function () {
+      var cs = getComputedStyle(document.documentElement);
+      var page = greyLum(cs.getPropertyValue('--bg'));
+      var token = greyLum(cs.getPropertyValue('--surface'));
+      var card = greyLum(getComputedStyle(document.querySelector('#stage .card')).backgroundColor);
+      return page > 0 && token > 0 && page - token >= 18 && Math.abs(card - token) < 2;
+    })(), 'page ' + getComputedStyle(document.documentElement).getPropertyValue('--bg') +
+      ' vs card ' + getComputedStyle(document.querySelector('#stage .card')).backgroundColor);
+
+    /* The render-time inline colours follow the palette too: a record with no
+       Chinese gloss used to be painted with a hard-coded blue. */
+    var chromatic = upsertRecord({ term: 'chromatic', type: 'word', source: 'manual' });
+    refreshRecords();
+    step('skin: gothic repaints the inline gloss hint grey', (function () {
+      var rows = document.querySelectorAll('#recordsList .item__zh');
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i].textContent.indexOf('No Chinese meaning yet') >= 0) {
+          return greyLum(getComputedStyle(rows[i]).color) > 0;
+        }
+      }
+      return false;
+    })(), 'records hint on the palette');
+    removeRecord(chromatic.id);
+    refreshRecords();
+
+    /* The whole app has to be greyscale in this skin - not the tokens the table
+       lists, but every colour the browser actually ends up painting, on all
+       four pages and all three sheets.  Transitions are switched off for the
+       check first: a headless run does not advance the animation clock, so a
+       running transition would be sampled at its start value and report the
+       previous skin's colour.  The picker's swatches are the one deliberate
+       exception - there they show each skin's own colour, Classic included. */
+    (function () {
+      var kill = document.createElement('style');
+      kill.id = 'smoke-no-motion';
+      kill.textContent = '*,*::before,*::after{transition:none !important;animation:none !important}';
+      document.head.appendChild(kill);
+      setSkin('gothic');
+    })();
+    var colourLeaks = [];
+    step('skin: nothing on any page or sheet paints a colour', (function () {
+      function grey(css) {
+        var s = String(css || '').trim();
+        if (!s || s === 'none' || s === 'transparent') return true;
+        var m = /rgba?\(([^)]+)\)/.exec(s);
+        if (!m) return true;
+        var p = m[1].split(',');
+        if (p.length > 3 && parseFloat(p[3]) === 0) return true;
+        var r = parseFloat(p[0]), g = parseFloat(p[1]), b = parseFloat(p[2]);
+        return Math.max(r, g, b) - Math.min(r, g, b) <= 6;
+      }
+      var props = ['color', 'backgroundColor', 'borderTopColor', 'borderRightColor',
+        'borderBottomColor', 'borderLeftColor', 'outlineColor', 'stroke', 'fill',
+        'boxShadow', 'textShadow'];
+      var seen = {};
+      function scan(tag) {
+        $$('*').forEach(function (el) {
+          if (el.closest('.skinopt__swatch')) return;         /* Classic's own blue */
+          var cs = getComputedStyle(el);
+          props.forEach(function (p) {
+            if (grey(cs[p])) return;
+            var key = tag + '|' + el.tagName + '|' + (el.id || '') + '|' +
+              (typeof el.className === 'string' ? el.className : '') + '|' + p + '|' + cs[p];
+            if (seen[key]) return;
+            seen[key] = 1;
+            colourLeaks.push(key);
+          });
+        });
+      }
+      ['discover', 'mine', 'records', 'quiz'].forEach(function (pg) { setPage(pg); scan(pg); });
+      ['sheetInfo', 'sheetEntry', 'sheetData'].forEach(function (sh) { openSheet(sh); scan(sh); closeSheet(sh); });
+      setPage('discover');
+      var kill = document.getElementById('smoke-no-motion');
+      if (kill) kill.remove();
+      return colourLeaks.length === 0;
+    })(), colourLeaks.length ? colourLeaks.slice(0, 3).join('  /  ')
+      : 'every painted colour is on the grey axis, on all four pages and all three sheets');
+
+    setSkin('classic');
+    step('skin: switching back to classic restores the built-in icons',
+      !!document.querySelector('.pagehead__icon[data-pageicon="quiz"] svg'));
+    step('skin: switching back to classic restores the favicon',
+      document.querySelector('link[rel="icon"]').getAttribute('href').indexOf('data:image/svg+xml') === 0,
+      document.querySelector('link[rel="icon"]').getAttribute('href').slice(0, 26));
+    step('skin: switching back to classic drops the artwork',
+      document.getElementById('appbarSlot').innerHTML === '' &&
+      document.getElementById('brandName').textContent === 'LexiCards');
+
+    /* a second skin can be added at runtime and takes over cleanly - that is
+       the whole point of the registry, so prove it without shipping one */
+    SKINS.midnight = {
+      id: 'midnight', name: 'Midnight', note: 'test skin',
+      vars: { '--primary': '#5B21B6', '--primary-dark': '#2E1065', '--highlight': '#FDE68A' },
+      themeColor: '#5B21B6', androidStatus: '#2E1065',
+      icons: { quiz: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>' },
+      wordmark: 'LexiCards Night', appbarImage: 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
+    };
+    setSkin('midnight');
+    step('skin: a new skin takes over the colour tokens',
+      getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() === '#5B21B6',
+      getComputedStyle(document.documentElement).getPropertyValue('--primary').trim());
+    step('skin: the new skin repaints the page icons', (function () {
+      var el = document.querySelector('.pagehead__icon[data-pageicon="quiz"] svg');
+      return !!el && el.querySelector('circle') !== null;
+    })(), 'quiz icon replaced');
+    step('skin: the new skin restyles the wordmark',
+      document.getElementById('brandName').textContent === 'LexiCards Night',
+      document.getElementById('brandName').textContent);
+    step('skin: the new skin fills the app bar slot',
+      !!document.querySelector('#appbarSlot .appbar__slot-img'));
+    step('skin: the browser chrome follows the skin',
+      document.querySelector('meta[name="theme-color"]').getAttribute('content') === '#5B21B6',
+      document.querySelector('meta[name="theme-color"]').getAttribute('content'));
+    step('skin: the choice is persisted', state.settings.skin === 'midnight' &&
+      JSON.parse(localStorage.getItem('lexi.settings.v1')).skin === 'midnight', state.settings.skin);
+
+    /* switching back must clear the overrides - a skin may not leak into the
+       next one, which is the bug this catches */
+    setSkin('classic');
+    step('skin: switching back clears the previous skin overrides',
+      getComputedStyle(document.documentElement).getPropertyValue('--primary').trim() === '#1565C0',
+      getComputedStyle(document.documentElement).getPropertyValue('--primary').trim());
+    step('skin: the classic icons come back',
+      !!document.querySelector('.pagehead__icon[data-pageicon="quiz"] svg path'));
+    step('skin: the classic wordmark comes back',
+      document.getElementById('brandName').textContent === 'LexiCards');
+    step('skin: the app bar slot is empty again', document.getElementById('appbarSlot').innerHTML === '');
+    step('skin: an unknown skin falls back to the default', (function () {
+      setSkin('does-not-exist');
+      return state.settings.skin === 'classic' && currentSkin().id === 'classic';
+    })(), state.settings.skin);
+    delete SKINS.midnight;
+
+    /* ---- 17. the example highlight, including the case that was broken ---- */
+    step('zh highlight: every sense of the gloss is tried, not just the first',
+      markZhHits('我們放棄了這個計畫。', ['vt. 放棄', 'vt. 拋棄']).indexOf('ex-hit') > 0);
+    step('zh highlight: a word the translator reworded is still lit up (hike -> 健行)',
+      markZhHits('明天我們要去健行。', ['n. 徒步旅行', 'n. 遠足', 'n. 漲價'],
+        { anchorText: 'We are to go on a hike tomorrow.', anchorTerm: 'hike' })
+        .indexOf('健行') > 0 && markZhHits('明天我們要去健行。', ['n. 徒步旅行'],
+          { anchorText: 'We are to go on a hike tomorrow.', anchorTerm: 'hike' }).indexOf('ex-hit') > 0,
+      markZhHits('明天我們要去健行。', ['n. 徒步旅行'], { anchorText: 'We are to go on a hike tomorrow.', anchorTerm: 'hike' }));
+    step('zh highlight: the term is found in its inflected form for the anchor',
+      !!termAnchor('Birds are singing in the trees.', 'sing'),
+      JSON.stringify(termAnchor('Birds are singing in the trees.', 'sing')));
+    step('zh highlight: no guess is made when the term is not in the sentence',
+      termAnchor('Nothing to see here.', 'hike') === null);
+    step('zh highlight: a gloss with nothing in common still stays unhighlighted',
+      markZhHits('這是一個例子。', '倫理', { anchorText: 'This is an example.', anchorTerm: 'ethical' })
+        .indexOf('ex-hit') < 0);
+    step('zh highlight: the example block uses the same helper',
+      exampleZhHTML({ term: 'hike', zh: ['n. 徒步旅行'], example: 'We are to go on a hike tomorrow.',
+        exampleZh: '明天我們要去健行。' }).indexOf('健行') > 0,
+      exampleZhHTML({ term: 'hike', zh: ['n. 徒步旅行'], example: 'We are to go on a hike tomorrow.', exampleZh: '明天我們要去健行。' }));
   } catch (err) {
     R.ok = false;
     R.steps.push({ name: 'exception thrown', pass: false, info: String((err && err.stack) || err).slice(0, 400) });

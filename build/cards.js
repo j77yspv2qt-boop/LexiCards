@@ -117,17 +117,58 @@ function markHits(text, needle) {
   return out + escapeHTML(t.slice(at));
 }
 
+/* ---- where does the term sit in the English sentence? ----
+   The last-resort layer needs it: knowing that "hike" sits in the middle of
+   the English sentence tells us where its Chinese rendering has to sit in the
+   translation, which is the only way to light up 健行 in 明天我們要去健行。 -
+   a word that shares not one character with the glossary. */
+function termAnchor(text, needle) {
+  const t = String(text || '');
+  const forms = [String(needle || '')].concat(wordForms(needle));
+  const lo = t.toLowerCase();
+  for (let i = 0; i < forms.length; i++) {
+    const f = String(forms[i] || '').toLowerCase().trim();
+    if (f.length < 2) continue;
+    const at = lo.indexOf(f);
+    if (at < 0) continue;
+    if (/^[a-z ]+$/.test(f)) {
+      const before = at > 0 ? t[at - 1] : '';
+      const after = at + f.length < t.length ? t[at + f.length] : '';
+      if (/[a-z]/i.test(before) || /[a-z]/i.test(after)) continue;   /* inside a word */
+    }
+    return { at: at, len: f.length, ratio: at / Math.max(1, t.length) };
+  }
+  return null;
+}
+
 /* ---------------------- Chinese side of the example ----------------------
    The translation is machine-made, so it seldom repeats the glossary wording:
    the gloss of "sing" is 唱歌 while the sentence reads 唱這首歌.  Searching for
    the gloss verbatim therefore misses most of the time and the Chinese line
-   shows no highlight at all.  Try the senses one by one, then mark the longest
-   run the sentence and a sense really share. */
+   shows no highlight at all.  Three passes, cheapest first:
+
+     1. a sense appears as it stands           -> mark every hit
+     2. the longest run a sense and the
+        sentence really share                  -> mark that run
+     3. nothing in common at all (the machine
+        picked a word of its own, e.g. 健行
+        for 徒步)                              -> place the term by its
+        position in the English sentence and mark the best window there
+
+   Only pass 3 guesses, so it runs last and is biased towards the shortest
+   window that still carries a character of the meaning. */
 function zhSenses(gloss) {
-  return String(gloss == null ? '' : gloss)
-    .split(/[\/、；;，,（）()【】\[\]]|\s+/)
-    .map(s => s.replace(/^[a-z]+\.\s*/i, '').trim())
-    .filter(s => /[\u3400-\u9FFF\uF900-\uFAFF]/.test(s));
+  const list = Array.isArray(gloss) ? gloss : [gloss];
+  const out = [];
+  list.forEach(g => {
+    String(g == null ? '' : g)
+      .split(/[\/、；;，,（）()【】\[\]]|\s+/)
+      .map(s => s.replace(/^[a-z]+\.\s*/i, '').trim())
+      .forEach(s => {
+        if (/[\u3400-\u9FFF\uF900-\uFAFF]/.test(s) && out.indexOf(s) < 0) out.push(s);
+      });
+  });
+  return out;
 }
 
 function longestSharedRun(text, sense) {
@@ -143,7 +184,55 @@ function longestSharedRun(text, sense) {
   return best;
 }
 
-function markZhHits(text, gloss) {
+/* characters of the sentence that actually carry meaning (punctuation and the
+   stray spaces a machine translator sprinkles around are skipped) */
+function zhContentSlots(text) {
+  const slots = [];
+  for (let i = 0; i < text.length; i++) {
+    if (/[\u3400-\u9FFF\uF900-\uFAFF\u3040-\u30FF]/.test(text[i])) slots.push(i);
+  }
+  return slots;
+}
+
+/* pass 3: no character in common with the glossary, so the word is placed by
+   where the English term sits.  Chinese keeps the order of the English, so the
+   same relative spot is a good enough guess; the window around it is then
+   narrowed to the shortest run that still shares a character with a sense. */
+function markZhByAnchor(text, senses, anchor) {
+  const slots = zhContentSlots(text);
+  if (!anchor || slots.length < 2) return null;
+  const guess = Math.round(anchor.ratio * (slots.length - 1));
+  const TOL = 3;
+
+  let best = null;
+  for (let len = 1; len <= 4; len++) {
+    const from = Math.max(0, guess - TOL);
+    const to = Math.min(slots.length - len, guess + TOL);
+    for (let at = from; at <= to; at++) {
+      let shared = 0;
+      for (let i = 0; i < len; i++) {
+        const ch = text[slots[at + i]];
+        for (let s = 0; s < senses.length; s++) {
+          if (senses[s].indexOf(ch) >= 0) { shared++; break; }
+        }
+      }
+      if (shared < 1) continue;            /* a window with no link at all is a coin flip */
+      const dist = Math.abs(at - guess);
+      /* Characters of the meaning decide the window outright - that is the only
+         real evidence there is.  Among the windows that tie on that, the one
+         shaped like a Chinese word (two characters) wins over a stray single
+         character, so 健行 beats the bare 行 of 旅行.  The guessed position is
+         only a weak tie-breaker on top: a machine translator reorders freely. */
+      const score = shared * 100 - dist - Math.abs(len - 2) * 8;
+      if (!best || score > best.score) best = { at: at, len: len, score: score };
+    }
+  }
+  if (!best) return null;
+  const start = slots[best.at];
+  return { at: start, len: slots[best.at + best.len - 1] - start + 1 };
+}
+
+function markZhHits(text, gloss, opts) {
   const t = String(text == null ? '' : text);
   if (!t) return '';
   const senses = zhSenses(gloss);
@@ -161,10 +250,25 @@ function markZhHits(text, gloss) {
     if (!run || run.len < (s.length <= 2 ? 1 : 2)) return;
     if (!best || run.len > best.len) best = run;
   });
+  if (!best && opts && opts.anchorText) {
+    /* the machine translator used a word of its own - place the term by its
+       position in the English sentence */
+    best = markZhByAnchor(t, senses, termAnchor(opts.anchorText, opts.anchorTerm));
+  }
   if (!best) return escapeHTML(t);
   return escapeHTML(t.slice(0, best.at)) +
     '<b class="ex-hit">' + escapeHTML(t.substr(best.at, best.len)) + '</b>' +
     escapeHTML(t.slice(best.at + best.len));
+}
+
+/* the Chinese line of an example, with the term lit up.  Takes the whole
+   meaning, so every sense of the gloss and the English sentence are on hand -
+   one sense alone left most sentences unhighlighted. */
+function exampleZhHTML(m) {
+  if (!m || !m.exampleZh) return '';
+  return markZhHits(displayZh(m.exampleZh), m.zh, {
+    anchorText: m.example, anchorTerm: m.term
+  });
 }
 
 function meaningBlocksHTML(m, type, opts) {
@@ -209,16 +313,15 @@ function meaningBlocksHTML(m, type, opts) {
       ).join('') + '</ul></div>';
   } else if (type === 'phrase' || type === 'pattern') {
     html += '<div class="defblock"><div class="defblock__label defblock__label--en">English explanation</div>' +
-      '<div class="defblock__en" style="color:#5B7290">The free dictionary API only covers single words, so ' +
+      '<div class="defblock__en" style="color:var(--muted,#5B7290)">The free dictionary API only covers single words, so ' +
       (type === 'pattern' ? 'sentence patterns' : 'phrases') + ' get a Chinese gloss only. ' +
       'Save the card and write your own English explanation - it is kept from then on.</div></div>';
   }
   if (m.example) {
-    const gloss = (m.zh && m.zh.length) ? m.zh[0] : '';
     html += '<div class="defblock defblock--example" data-example>' +
       '<div class="defblock__label defblock__label--en">Example Sentence</div>' +
       '<div class="card__example">' + markHits(m.example, m.term) + '</div>' +
-      (m.exampleZh ? '<div class="card__example-zh">' + markZhHits(displayZh(m.exampleZh), displayZh(gloss)) + '</div>' : '') +
+      (m.exampleZh ? '<div class="card__example-zh">' + exampleZhHTML(m) + '</div>' : '') +
       '</div>';
   }
   return html;
@@ -248,7 +351,7 @@ function buildCardEl(descriptor, depth) {
     '<div class="card__foot">' +
       '<div class="card__meta">' +
         '<span class="chip chip--src" data-src>' + escapeHTML(m.loaded ? sourceLabel(m.source) : 'Loading...') + '</span>' +
-        '<span class="chip chip--src" data-saved hidden style="background:#E8F5E9;color:#1B5E20">Saved</span>' +
+        '<span class="chip chip--src" data-saved hidden style="background:var(--success-soft,#E8F5E9);color:var(--success-ink,#1B5E20)">Saved</span>' +
         (descriptor.source === 'custom' ? '<span class="chip chip--src">My list</span>' : '') +
         (descriptor.source === 'record' ? '<span class="chip chip--src">Record</span>' : '') +
       '</div>' +

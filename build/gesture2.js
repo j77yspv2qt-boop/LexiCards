@@ -76,7 +76,7 @@ function attachCardGestures(el, descriptor) {
 /* flip to the previous card (dir < 0, swipe left) or the next one (dir > 0,
    swipe right / Shuffle) from a swipe gesture or a key press */
 function flipCard(dir, el) {
-  const card = el || $('.card--top', $('#stage'));
+  const card = el || $('.card--top', dictStage());
   if (card) animateCardOut(card, dir < 0 ? -1 : 1);
   state.swiping = true;
   setTimeout(() => {

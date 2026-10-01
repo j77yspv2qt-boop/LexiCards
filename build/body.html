@@ -7,27 +7,31 @@
         <button type="button" class="brand__mark" id="btnAppInfo" aria-label="App info" title="App info">
           <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.2"/><path d="M12 7.5v.2"/></svg>
         </button>
-        <span class="brand__name">LexiCards</span>
+        <span class="brand__name" id="brandName">LexiCards</span>
       </div>
-      <nav class="maintabs" id="mainTabs" aria-label="Main sections">
-        <button type="button" class="maintab is-active" data-view="dictionary">Dictionary</button>
-        <button type="button" class="maintab" data-view="revision">Revision</button>
-      </nav>
+      <!-- the empty right half of the app bar: a skin puts its logo here -->
+      <div class="appbar__slot" id="appbarSlot" aria-hidden="true"></div>
     </div>
   </header>
 
   <main class="main">
 
-    <!-- ============================ DICTIONARY ============================ -->
-    <section class="view is-active" id="view-dictionary" aria-label="Dictionary">
-      <div class="segmented" id="dictSeg" role="tablist" aria-label="Dictionary pages">
-        <button type="button" class="seg is-active" data-sub="discover" role="tab">Discover</button>
-        <button type="button" class="seg" data-sub="mine" role="tab">My Cards</button>
+    <!-- The four pages sit side by side in one track and the user moves between
+         them by swiping: Discover -> My Cards -> Records -> Quiz.  The tab bar
+         at the bottom mirrors the same four pages. -->
+    <div class="pager" id="pager">
+      <div class="pager__track" id="pagerTrack">
+
+    <!-- ============================ DISCOVER ============================ -->
+    <section class="view is-active" id="view-discover" data-page="discover" aria-label="Discover">
+      <div class="pagehead">
+        <span class="pagehead__icon" data-pageicon="discover" aria-hidden="true"></span>
+        <h1 class="pagehead__title">Discover</h1>
       </div>
 
       <div class="toolbar">
         <div class="search-box">
-          <input type="search" class="input input--search" id="searchDiscover" placeholder="🔍 Look up any word & press Enter..." autocomplete="off">
+          <input type="search" class="input input--search" id="searchDiscover" placeholder="🔍 Look up any word &amp; press Enter..." autocomplete="off">
         </div>
       </div>
       <div class="toolbar" style="margin-top:6px">
@@ -59,85 +63,138 @@
       </div>
     </section>
 
-    <!-- ============================= REVISION ============================= -->
-    <section class="view" id="view-revision" aria-label="Revision">
-      <div class="segmented" id="revSeg" role="tablist" aria-label="Revision pages">
-        <button type="button" class="seg is-active" data-sub="records" role="tab">Records</button>
-        <button type="button" class="seg" data-sub="quiz" role="tab">Quiz</button>
+    <!-- ============================= MY CARDS ============================= -->
+    <section class="view" id="view-mine" data-page="mine" aria-label="My Cards">
+      <div class="pagehead">
+        <span class="pagehead__icon" data-pageicon="mine" aria-hidden="true"></span>
+        <h1 class="pagehead__title">My Cards</h1>
       </div>
 
-      <!-- ---------- records sub-page ---------- -->
-      <div class="subview is-active" id="sub-records">
-        <div class="toolbar">
-          <input type="search" class="input" id="searchRecords" placeholder="Search terms or meanings..." autocomplete="off">
-          <select class="select" id="sortRecords" aria-label="Sort records">
-            <option value="newest">Newest</option>
-            <option value="az">A to Z</option>
-            <option value="wrong">Most missed</option>
-            <option value="seen">Most reviewed</option>
-          </select>
-          <button type="button" class="iconbtn" id="btnData" aria-label="Data and settings">&#8943;</button>
-        </div>
-        <div class="count" id="recordsCount"></div>
-        <div class="list" id="recordsList"></div>
-        <div class="empty" id="recordsEmpty" hidden>
-          <div class="empty__icon" aria-hidden="true">&#128193;</div>
-          <div class="empty__title">No records yet</div>
-          <div>Drag a card&rsquo;s bottom handle onto the save panel,<br>or tap the + button to add an entry by hand.</div>
+      <div class="toolbar">
+        <div class="search-box">
+          <input type="search" class="input input--search" id="searchMine" placeholder="🔍 Look up any word &amp; press Enter..." autocomplete="off">
         </div>
       </div>
 
-      <!-- ---------- quiz sub-page ---------- -->
-      <div class="subview" id="sub-quiz">
-        <div class="quiz" id="quizPane">
-          <div class="toolbar toolbar--quiz">
-            <select class="select" id="quizScope" aria-label="Quiz range">
-              <option value="records">My saved words</option>
-              <option value="A1">A1 &middot; Beginner</option>
-              <option value="A2">A2 &middot; Elementary</option>
-              <option value="B1">B1 &middot; Intermediate</option>
-              <option value="B2">B2 / C1 &middot; Upper-intermediate &amp; above</option>
-
-            </select>
-            <span class="count count--inline" id="quizPoolInfo"></span>
-          </div>
-          <div class="quiz__prompt" id="quizPrompt">
-            <span class="chip chip--word" id="quizType">Word</span>
-            <span class="chip chip--src" id="quizLevel" hidden></span>
-            <div class="quiz__term" id="quizTerm">&mdash;</div>
-            <div class="quiz__phon" id="quizPhon"></div>
-          </div>
-          <div class="quiz__ask" id="quizAsk">Which one is the meaning?</div>
-          <div class="quiz__options" id="quizOptions" role="group" aria-label="Meaning options"></div>
-          <div class="quiz__feedback" id="quizFeedback"></div>
-          <div class="quiz__answer" id="quizAnswer" hidden></div>
-          <div class="quiz__actions">
-            <button type="button" class="btn btn--primary btn--sm" id="btnQuizNext" hidden>&#10003; Next</button>
-            <button type="button" class="btn btn--ghost btn--sm" id="btnQuizAdd" hidden>+ Add to Records</button>
-            <button type="button" class="btn btn--ghost btn--sm" id="btnQuizSkip">Skip</button>
-            <button type="button" class="btn btn--ghost btn--sm" id="btnQuizReset">Reset round</button>
-          </div>
-          <div class="quiz__stats">
-            <div class="stat"><div class="stat__v" id="stTotal">0</div><div class="stat__k">Round</div></div>
-            <div class="stat stat--ok"><div class="stat__v" id="stCorrect">0</div><div class="stat__k">Correct</div></div>
-            <div class="stat stat--no"><div class="stat__v" id="stWrong">0</div><div class="stat__k">Missed</div></div>
-            <div class="stat"><div class="stat__v" id="stStreak">0</div><div class="stat__k">Streak</div></div>
-            <div class="stat"><div class="stat__v" id="stAcc">&mdash;</div><div class="stat__k">Accuracy</div></div>
-          </div>
-          <div class="empty" id="quizEmpty" hidden>
-            <div class="empty__icon" aria-hidden="true">&#128221;</div>
-            <div class="empty__title">Nothing to test yet</div>
-            <div>Save a few words first &mdash; Quiz will then ask you<br>to pick their meaning.</div>
-          </div>
-          <div class="quiz__wronglist" id="quizWrongList"></div>
-        </div>
+      <div class="stage" id="stageMine">
+        <div class="stage__empty" id="stageEmptyMine" hidden></div>
       </div>
 
+      <p class="hint">Your saved words &middot; drag the bottom handle of a card to save another one</p>
+
+      <div class="progress">
+        <span id="dictPosMine">0 / 0</span>
+        <span class="progress__bar"><span class="progress__fill" id="dictFillMine"></span></span>
+        <span id="dictModeMine">My Cards</span>
+      </div>
+    </section>
+
+    <!-- ============================== RECORDS ============================== -->
+    <section class="view" id="view-records" data-page="records" aria-label="Records">
+      <div class="pagehead">
+        <span class="pagehead__icon" data-pageicon="records" aria-hidden="true"></span>
+        <h1 class="pagehead__title">Records</h1>
+      </div>
+
+      <div class="toolbar">
+        <input type="search" class="input" id="searchRecords" placeholder="Search terms or meanings..." autocomplete="off">
+        <select class="select" id="sortRecords" aria-label="Sort records">
+          <option value="newest">Newest</option>
+          <option value="az">A to Z</option>
+          <option value="wrong">Most missed</option>
+          <option value="seen">Most reviewed</option>
+        </select>
+        <button type="button" class="iconbtn" id="btnData" aria-label="Data and settings">&#8943;</button>
+      </div>
+
+      <div class="count" id="recordsCount"></div>
+      <div class="list" id="recordsList"></div>
+      <div class="empty" id="recordsEmpty" hidden>
+        <div class="empty__icon" aria-hidden="true">&#128193;</div>
+        <div class="empty__title">No records yet</div>
+        <div>Drag a card&rsquo;s bottom handle onto the save panel,<br>or tap the + button to add an entry by hand.</div>
+      </div>
 
       <button type="button" class="fab" id="fabAdd" aria-label="New entry"><span aria-hidden="true">+</span></button>
     </section>
 
+    <!-- ================================ QUIZ ================================ -->
+    <section class="view" id="view-quiz" data-page="quiz" aria-label="Quiz">
+      <div class="pagehead">
+        <span class="pagehead__icon" data-pageicon="quiz" aria-hidden="true"></span>
+        <h1 class="pagehead__title">Quiz</h1>
+      </div>
+
+      <div class="quiz" id="quizPane">
+        <div class="toolbar toolbar--quiz">
+          <select class="select" id="quizScope" aria-label="Quiz range">
+            <option value="records">My saved words</option>
+            <option value="A1">A1 &middot; Beginner</option>
+            <option value="A2">A2 &middot; Elementary</option>
+            <option value="B1">B1 &middot; Intermediate</option>
+            <option value="B2">B2 / C1 &middot; Upper-intermediate &amp; above</option>
+
+          </select>
+          <span class="count count--inline" id="quizPoolInfo"></span>
+        </div>
+        <div class="quiz__prompt" id="quizPrompt">
+          <span class="chip chip--word" id="quizType">Word</span>
+          <span class="chip chip--src" id="quizLevel" hidden></span>
+          <div class="quiz__term" id="quizTerm">&mdash;</div>
+          <div class="quiz__phon" id="quizPhon"></div>
+        </div>
+        <div class="quiz__ask" id="quizAsk">Which one is the meaning?</div>
+        <div class="quiz__options" id="quizOptions" role="group" aria-label="Meaning options"></div>
+        <div class="quiz__feedback" id="quizFeedback"></div>
+        <div class="quiz__answer" id="quizAnswer" hidden></div>
+        <div class="quiz__actions">
+          <button type="button" class="btn btn--primary btn--sm" id="btnQuizNext" hidden>&#10003; Next</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnQuizAdd" hidden>+ Add to Records</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnQuizSkip">Skip</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnQuizReset">Reset round</button>
+        </div>
+        <div class="quiz__stats">
+          <div class="stat"><div class="stat__v" id="stTotal">0</div><div class="stat__k">Round</div></div>
+          <div class="stat stat--ok"><div class="stat__v" id="stCorrect">0</div><div class="stat__k">Correct</div></div>
+          <div class="stat stat--no"><div class="stat__v" id="stWrong">0</div><div class="stat__k">Missed</div></div>
+          <div class="stat"><div class="stat__v" id="stStreak">0</div><div class="stat__k">Streak</div></div>
+          <div class="stat"><div class="stat__v" id="stAcc">&mdash;</div><div class="stat__k">Accuracy</div></div>
+        </div>
+        <div class="empty" id="quizEmpty" hidden>
+          <div class="empty__icon" aria-hidden="true">&#128221;</div>
+          <div class="empty__title">Nothing to test yet</div>
+          <div>Save a few words first &mdash; Quiz will then ask you<br>to pick their meaning.</div>
+        </div>
+        <div class="quiz__wronglist" id="quizWrongList"></div>
+      </div>
+    </section>
+
+      </div><!-- /.pager__track -->
+    </div><!-- /.pager -->
+
   </main>
+
+  <!-- The main navigation, out of the app bar and down at the bottom: one
+       button per page, each carrying the same icon as the page title.  Tapping
+       still works - the swipe is just the quick way. -->
+  <nav class="tabbar" id="mainTabs" aria-label="Main sections">
+    <button type="button" class="tabbar__btn is-active" data-page="discover">
+      <span class="tabbar__icon" data-pageicon="discover" aria-hidden="true"></span>
+      <span class="tabbar__label">Discover</span>
+    </button>
+    <button type="button" class="tabbar__btn" data-page="mine">
+      <span class="tabbar__icon" data-pageicon="mine" aria-hidden="true"></span>
+      <span class="tabbar__label">My Cards</span>
+    </button>
+    <button type="button" class="tabbar__btn" data-page="records">
+      <span class="tabbar__icon" data-pageicon="records" aria-hidden="true"></span>
+      <span class="tabbar__label">Records</span>
+    </button>
+    <button type="button" class="tabbar__btn" data-page="quiz">
+      <span class="tabbar__icon" data-pageicon="quiz" aria-hidden="true"></span>
+      <span class="tabbar__label">Quiz</span>
+    </button>
+  </nav>
 
   <!-- ============================ DROP ZONE ============================ -->
   <div class="dropzone" id="dropzone" aria-hidden="true">
@@ -293,6 +350,20 @@
         </div>
 
         <div class="field" style="margin-top:16px">
+          <span class="field__label">App skin</span>
+          <span class="field__hint">Colours, the icons next to the page titles, the LexiCards wordmark and the app icon.</span>
+        </div>
+        <div class="skins" id="skinPicker" role="radiogroup" aria-label="App skin"></div>
+
+        <div class="field" style="margin-top:16px">
+          <span class="field__label">User guide</span>
+          <span class="field__hint">How the four pages work, the gestures, saving cards, backups and updates.</span>
+        </div>
+        <div class="databtns">
+          <button type="button" class="btn btn--ghost btn--sm" id="btnGuide">Open the guide</button>
+        </div>
+
+        <div class="field" style="margin-top:16px">
           <span class="field__label">Updates</span>
           <span class="field__hint" id="updateInfo">Tap &ldquo;Check for updates&rdquo; to look for a newer release on GitHub.</span>
         </div>
@@ -306,6 +377,28 @@
       </div>
       <div class="sheet__foot">
         <button type="button" class="btn btn--primary" data-close="sheetInfo">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- The user guide.  Its own sheet, and its own language switch: the reader
+       may read the guide in one script while keeping their cards in the other.
+       The text itself lives in build/guide.js. -->
+  <div class="sheet" id="sheetGuide" role="dialog" aria-modal="true" aria-labelledby="guideTitle" aria-hidden="true">
+    <div class="sheet__panel">
+      <div class="sheet__head">
+        <h2 id="guideTitle">使用說明</h2>
+        <button type="button" class="iconbtn" data-close="sheetGuide" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="sheet__body">
+        <div class="segmented" id="guideLangSeg" role="tablist" aria-label="Guide language">
+          <button type="button" class="seg" data-guide-lang="traditional" role="tab">繁體中文</button>
+          <button type="button" class="seg" data-guide-lang="simplified" role="tab">简体中文</button>
+        </div>
+        <div class="guide" id="guideBody"></div>
+      </div>
+      <div class="sheet__foot">
+        <button type="button" class="btn btn--primary" data-close="sheetGuide">Done</button>
       </div>
     </div>
   </div>

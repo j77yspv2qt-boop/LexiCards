@@ -148,6 +148,7 @@ const state = {
   cache     : {},
   tr        : {},          // cache of machine translations, keyed by source text
   custom    : [],
+  page      : 'discover',   // which of the four pages is on screen
   dictSub   : 'discover',
   revSub    : 'records',
   filter    : 'all',

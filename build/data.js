@@ -33,6 +33,7 @@ function syncInfoUI() {
   if (v) v.textContent = 'Version ' + ((NATIVE.isNative && NATIVE.version) ? NATIVE.version : APP_VERSION);
   $$('#defLangSeg .seg').forEach(b =>
     b.classList.toggle('is-active', b.dataset.lang === (state.settings.definitionLang || 'traditional')));
+  syncSkinUI();
   if (typeof syncUpdateUI === 'function') syncUpdateUI();
 }
 
@@ -51,6 +52,8 @@ function initInfoSheet() {
   if (btn) btn.addEventListener('click', () => { openSheet('sheetInfo'); checkForUpdate(false); });
   $$('#defLangSeg .seg').forEach(b =>
     b.addEventListener('click', () => setDefLang(b.dataset.lang)));
+  initSkins();
+  initGuide();
   initUpdateSheet();
 }
 
