@@ -3,14 +3,15 @@
 
 Primevere is the spring skin: green and light green, cream paper and a little
 gilt.  The artwork arrives as antiques - a tree, a swan, a rose, a robin, a
-garland of bellflowers and the calligraphic wordmark - already cut out on
-transparency, plus the launcher tile, which is the one piece that still carries
-its studio-black backdrop.
+garland of bellflowers, the calligraphic wordmark and the launcher tile -
+already cut out on transparency.  The tile is a squircle drawn to the very
+edge of its square, so it drops in as it is: nothing to flood-fill, nothing
+to crop.
 
 Nothing is recoloured here.  Gothic drove its art onto the grey axis because a
 monochrome skin demands it; this skin is the opposite, so every piece keeps the
-colours it was drawn in and only the backdrop is dropped, the margins trimmed
-and the image scaled to the size the app asks for.  The one adjustment is the
+colours it was drawn in and only the margins are trimmed and the image scaled
+to the size the app asks for.  The one adjustment is the
 page icons: they sit next to a page title at 19-27 px, so they are rendered
 square and centred on a transparent canvas (see PAGE_ICONS) instead of being
 cropped to whatever shape a render came in.
@@ -89,8 +90,10 @@ SPLASH_DP = 96
 
 # The launcher art is the whole tile, not a mark floating in a field, so the
 # foreground layer IS the tile: at 1.0 it covers the 108dp canvas and the
-# Android mask crops it to the middle - which is the card and its green L, the
-# heart of the drawing, with the wreath running off the edges.
+# Android mask takes the middle - the card and its green L, the heart of the
+# drawing.  The tile arrives shaped as a squircle already cut on transparency,
+# so the canvas edge shows the launcher's own backdrop instead of a straight
+# cut through the artwork.
 FOREGROUND_ART = 1.0
 
 # the four page icons: square artwork, centred on a transparent canvas
@@ -252,41 +255,6 @@ def circle_mask(rows, size, feather=1.0):
                 row[x * 4 + 3] = int(row[x * 4 + 3] * (r + feather - d) / (2 * feather))
 
 
-def cut_out_backdrop(width, height, rows, tolerance=46):
-    """Drop the studio backdrop of the launcher tile.
-
-    The tile is the one piece that arrives opaque: the drawing sits on a sheet
-    of pure black.  A flood fill from the border - not a brightness threshold -
-    is what makes removing it safe, because the illustration has genuine
-    near-black pixels of its own (the shaded leaves along the rim) and a
-    threshold would punch holes in them."""
-    seen = bytearray(width * height)
-    stack = []
-    for x in range(width):
-        stack.append((x, 0))
-        stack.append((x, height - 1))
-    for y in range(height):
-        stack.append((0, y))
-        stack.append((width - 1, y))
-    while stack:
-        x, y = stack.pop()
-        if x < 0 or y < 0 or x >= width or y >= height:
-            continue
-        i = y * width + x
-        if seen[i]:
-            continue
-        seen[i] = 1
-        o = x * 4
-        row = rows[y]
-        if max(row[o], row[o + 1], row[o + 2]) > tolerance:
-            continue                      # the rim of the tile: stop here
-        row[o:o + 4] = b"\x00\x00\x00\x00"
-        stack.append((x + 1, y))
-        stack.append((x - 1, y))
-        stack.append((x, y + 1))
-        stack.append((x, y - 1))
-
-
 def crop_to_content(width, height, rows, threshold=32, margin=0.02):
     """Trim the empty margin around the mark, which is what makes the
     wordmark usable at 26px tall."""
@@ -441,7 +409,6 @@ def main():
     deco = save_out("deco.png", nw, nh, art)
 
     tile_w, tile_h, tile = load("appicon")
-    cut_out_backdrop(tile_w, tile_h, tile)
     appicon = save_out("appicon-%d.png" % APPICON, APPICON, APPICON,
                        resize(tile_w, tile_h, tile, APPICON, APPICON))
 

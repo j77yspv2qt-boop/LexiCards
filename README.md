@@ -190,7 +190,7 @@ Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmark
 所有覆寫，**不會互相殘留**。
 
 各款的圖像素材放在 `build/skins/<skin>/`（Primevere 另有 `source/` 原始檔與 `out/` 成品），
-`make.py` 會縮圖、摳掉不透明底、輸出 `build/skin_<skin>.js`
+`make.py` 會縮圖、摳掉不透明底（素材本身已去背者直接套用）、輸出 `build/skin_<skin>.js`
 （base64 data URI）與 Android 的桌面圖示／啟動圖資源；**改圖請改素材再重跑腳本**。
 
 > **Android 桌面圖示**：已裝好的 App 不能就地改桌面圖示，所以 manifest 裡放了三個
