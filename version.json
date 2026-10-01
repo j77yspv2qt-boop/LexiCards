@@ -1,10 +1,10 @@
 {
-  "version": "2.1",
+  "version": "2.1.1",
   "released": "2026-10-02",
   "apk": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest/download/LexiCards.apk",
-  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.1/LexiCards.apk",
+  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.1.1/LexiCards.apk",
   "page": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest",
   "mirror_page": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@main/",
-  "notes": "New Primevere skin: a spring-green theme with its own botanical artwork, page icons, wordmark and Android launcher icon. The skin picker now shows each skin's app icon instead of a colour swatch, and the user guide was trimmed."
+  "notes": "Primevere app icon fixed: the launcher art is the background-removed squircle now, drawn to the edge of its square, so the Android adaptive-icon mask no longer crops into the wreath. Everything else is unchanged from 2.1."
 }
 

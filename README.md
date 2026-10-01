@@ -5,7 +5,7 @@
 內建 Oxford 3000/5000 完整詞庫的中文釋義、音標與例句，**沒有網路也能學**；測驗以 CEFR 程度出題，答題有干擾項、動畫與震動回饋；所有記錄只存在你自己的裝置，並且有滾動備份。
 
 - 網頁版：`index.html`（零依賴、零建置，雙擊即用）
-- Android 版：Releases 頁的 `LexiCards.apk`（v2.1，約 3.0 MB）
+- Android 版：Releases 頁的 `LexiCards.apk`（v2.1.1，約 3.3 MB）
 
 ---
 
@@ -305,7 +305,7 @@ Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmark
 
 ## 5. Android APK
 
-- **版本**：1.6（versionCode 5，minSdk 24 / targetSdk 35），約 820 KB，零額外依賴
+- **版本**：2.1.1（versionCode 11，minSdk 24 / targetSdk 35），約 3.3 MB，零額外依賴
 - **權限**：僅 `INTERNET`、`ACCESS_NETWORK_STATE`、`VIBRATE`
 - **安裝**：從 Releases 下載 APK → 允許安裝未知來源 → 完成
 - **升級**：直接安裝新版本即可覆蓋，記錄保留（見第 4 節）
@@ -340,7 +340,8 @@ App info 面板多了一個 **Updates** 區塊：
 
 ### 5.3 發版流程
 
-版本規則：**每次發佈 +0.1**（1.4 → 1.6），`versionCode` 同步 +1。
+版本規則：**功能發佈 +0.1**（1.4 → 1.6）；只修錯、不動功能時發 **patch**（2.1 → 2.1.1）。
+不論哪一種，`versionCode` 一律 +1。
 
 ```bash
 # 1. 改三處版本號
@@ -498,6 +499,16 @@ https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v1.7/LexiCards.apk
 ---
 
 ## 9. 修訂紀錄
+
+### v2.1.1
+
+| # | 修掉什麼 / 做了什麼 | 原因 |
+|---|---|---|
+| 1 | **Primevere App 圖示換成去背版本** | 上一版的桌面圖示素材把整個方形填滿，Android 的 adaptive-icon 遮罩會切進花圈。改用**已去背的 squircle**（畫到方形邊緣、四角透明），因此 `make.py` 不再需要 flood fill 掉黑色背景，`cut_out_backdrop()` 移除、tile 直接套用。`out/appicon-192.png`、`build/skin_primevere.js`、`index.html`、`android/assets/index.html`、五組 mipmap 與 `LexiCards.apk` 全部重生 |
+
+> 只換圖示、不動功能，所以版本號走 patch（2.1 → 2.1.1）、`versionCode` 11。
+> `make.py` 與 `build.py` 可重現（重跑一次所有產物逐位元相同），headless Chromium
+> 功能測試 **238/238** 通過。
 
 ### v2.1
 
