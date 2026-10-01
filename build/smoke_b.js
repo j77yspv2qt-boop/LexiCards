@@ -742,7 +742,7 @@
     await wait(200);
 
     /* ---- 16. the skin machinery ---- */
-    step('skin: classic and gothic are the two skins that ship', skinIds().join(',') === 'classic,gothic', skinIds().join(','));
+    step('skin: classic, gothic and primevere are the skins that ship', skinIds().join(',') === 'classic,gothic,primevere', skinIds().join(','));
     step('skin: the chosen skin is applied as data-skin on <html>',
       document.documentElement.getAttribute('data-skin') === 'classic',
       document.documentElement.getAttribute('data-skin'));
@@ -751,6 +751,25 @@
       document.querySelectorAll('#skinPicker .skinopt').length);
     step('skin: the current skin is marked in the picker',
       document.querySelector('#skinPicker .skinopt.is-active').getAttribute('data-skin') === 'classic');
+    /* The picker shows each skin's app icon instead of a chip of its primary
+       colour, so every row has to bring a picture - its own, or the built-in
+       launcher tile it would fall back to. */
+    step('skin: every picker row shows that skin\'s app icon', (function () {
+      var rows = document.querySelectorAll('#skinPicker .skinopt');
+      if (rows.length !== skinIds().length) return false;
+      for (var i = 0; i < rows.length; i++) {
+        var id = rows[i].getAttribute('data-skin');
+        var img = rows[i].querySelector('img.skinopt__icon');
+        if (!img || !img.getAttribute('src')) return false;
+        if (SKINS[id].appIcon && img.getAttribute('src').indexOf('data:image/png;base64,') !== 0) return false;
+        if (SKINS[id].appIcon && img.getAttribute('src') !== SKINS[id].appIcon) return false;
+      }
+      return true;
+    })(), document.querySelectorAll('#skinPicker .skinopt__icon').length + ' icons, ' +
+      document.querySelector('#skinPicker .skinopt__icon').getAttribute('src').slice(0, 24));
+    step('skin: a skin with no icon of its own falls back to the built-in tile',
+      skinAppIcon(SKINS.classic).indexOf('data:image/svg+xml') === 0,
+      skinAppIcon(SKINS.classic).slice(0, 24));
     step('skin: the wordmark is the one the app bar shows',
       document.getElementById('brandName').textContent === 'LexiCards',
       document.getElementById('brandName').textContent);
@@ -876,8 +895,9 @@
        four pages and all three sheets.  Transitions are switched off for the
        check first: a headless run does not advance the animation clock, so a
        running transition would be sampled at its start value and report the
-       previous skin's colour.  The picker's swatches are the one deliberate
-       exception - there they show each skin's own colour, Classic included. */
+       previous skin's colour.  The picker rows are no longer an exception: their
+       icon slots carry pictures of a skin rather than a painted swatch of its
+       colour, and a picture is not a computed style. */
     (function () {
       var kill = document.createElement('style');
       kill.id = 'smoke-no-motion';
@@ -903,7 +923,6 @@
       var seen = {};
       function scan(tag) {
         $$('*').forEach(function (el) {
-          if (el.closest('.skinopt__swatch')) return;         /* Classic's own blue */
           var cs = getComputedStyle(el);
           props.forEach(function (p) {
             if (grey(cs[p])) return;
@@ -923,6 +942,96 @@
       return colourLeaks.length === 0;
     })(), colourLeaks.length ? colourLeaks.slice(0, 3).join('  /  ')
       : 'every painted colour is on the grey axis, on all four pages and all three sheets');
+
+    /* ---- 16c. the spring skin: Primevere ---- */
+    /* Where Gothic takes every colour away, Primevere brings a whole palette and
+       a set of pictures with it, so these checks run the other way round: the
+       page has to come out pale and green, the panels have to sit above it, and
+       the artwork has to arrive with its colour intact.  A skin that only had
+       to lose its colours could be half-built and still pass the suite above. */
+    function channel(c) {
+      var s = String(c).trim(), r, g, b;
+      if (s.charAt(0) === '#') {
+        var n = parseInt(s.slice(1), 16);
+        r = (n >> 16) & 255; g = (n >> 8) & 255; b = n & 255;
+      } else if (s.indexOf('rgb') === 0) {
+        var p = s.slice(s.indexOf('(') + 1, s.length - 1).split(',');
+        r = Number(p[0]); g = Number(p[1]); b = Number(p[2]);
+      } else return null;
+      return { r: r, g: g, b: b, lum: (r + g + b) / 3 };
+    }
+    setSkin('primevere');
+    step('skin: primevere is applied as data-skin on <html>',
+      document.documentElement.getAttribute('data-skin') === 'primevere',
+      document.documentElement.getAttribute('data-skin'));
+    step('skin: primevere applies every token it names, verbatim', (function () {
+      var cs = getComputedStyle(document.documentElement);
+      var vars = SKINS.primevere.vars;
+      function same(a, b) {
+        return String(a).replace(/\s+/g, ' ').trim() === String(b).replace(/\s+/g, ' ').trim();
+      }
+      for (var name in vars) {
+        if (!same(cs.getPropertyValue(name), vars[name])) return name + ' = ' + cs.getPropertyValue(name);
+      }
+      return null;
+    })() === null, Object.keys(SKINS.primevere.vars).length + ' tokens');
+    step('skin: primevere replaces all four page-title icons with artwork', (function () {
+      var list = document.querySelectorAll('.pagehead__icon[data-pageicon]');
+      if (list.length !== 4) return false;
+      for (var i = 0; i < list.length; i++) {
+        var img = list[i].querySelector('img');
+        if (!img || img.getAttribute('src').indexOf('data:image/png;base64,') !== 0) return false;
+      }
+      return true;
+    })(), document.querySelectorAll('.pagehead__icon img').length + ' replaced');
+    step('skin: primevere replaces all four tab-bar icons with artwork', (function () {
+      var list = document.querySelectorAll('.tabbar__icon[data-pageicon]');
+      if (list.length !== 4) return false;
+      for (var i = 0; i < list.length; i++) {
+        var img = list[i].querySelector('img');
+        if (!img || img.getAttribute('src').indexOf('data:image/png;base64,') !== 0) return false;
+      }
+      return true;
+    })(), document.querySelectorAll('.tabbar__icon img').length + ' replaced');
+    step('skin: primevere swaps the wordmark for its gilt lettering', (function () {
+      var img = document.querySelector('#brandName .brand__logo');
+      return !!img && img.getAttribute('src').indexOf('data:image/png;base64,') === 0;
+    })(), document.getElementById('brandName').innerHTML.slice(0, 40));
+    step('skin: primevere fills the app bar slot',
+      !!document.querySelector('#appbarSlot .appbar__slot-img'));
+    step('skin: primevere repaints the browser chrome',
+      document.querySelector('meta[name="theme-color"]').getAttribute('content') === '#4E8C4E',
+      document.querySelector('meta[name="theme-color"]').getAttribute('content'));
+    step('skin: primevere brings its own favicon',
+      document.querySelector('link[rel="icon"]').getAttribute('href').indexOf('data:image/png;base64,') === 0);
+    step('skin: the primevere row is the one marked active in the picker',
+      document.querySelector('#skinPicker .skinopt.is-active').getAttribute('data-skin') === 'primevere');
+    step('skin: primevere turns the page pale green and stands the cards on it', (function () {
+      var page = channel(getComputedStyle(document.documentElement).getPropertyValue('--bg'));
+      var card = channel(getComputedStyle(document.querySelector('#stage .card')).backgroundColor);
+      if (!page || !card) return false;
+      return page.g > page.r + 6 && page.g > page.b + 6 && page.lum > 200 && card.lum > page.lum;
+    })(), 'page ' + getComputedStyle(document.documentElement).getPropertyValue('--bg') +
+      ' vs card ' + getComputedStyle(document.querySelector('#stage .card')).backgroundColor);
+    step('skin: the page-title art is drawn at the size the skin asked for', (function () {
+      var el = document.querySelector('.pagehead__icon[data-pageicon="discover"]');
+      var img = el.querySelector('img');
+      var box = el.getBoundingClientRect(), art = img.getBoundingClientRect();
+      return Math.round(box.width) === 34 && Math.round(art.width) === 34 &&
+        Math.round(art.height) === 34;
+    })(), 'header icon box ' +
+      document.querySelector('.pagehead__icon').getBoundingClientRect().width + 'px');
+    step('skin: primevere is not greyscale', (function () {
+      var vars = SKINS.primevere.vars, chromatic = 0;
+      for (var name in vars) {
+        var m = String(vars[name]).trim();
+        if (m.charAt(0) !== '#' || m.length !== 7) continue;
+        var n = parseInt(m.slice(1), 16);
+        if (Math.max((n >> 16) & 255, (n >> 8) & 255, n & 255) -
+            Math.min((n >> 16) & 255, (n >> 8) & 255, n & 255) > 2) chromatic++;
+      }
+      return chromatic > 30;
+    })(), 'coloured tokens in the table');
 
     setSkin('classic');
     step('skin: switching back to classic restores the built-in icons',

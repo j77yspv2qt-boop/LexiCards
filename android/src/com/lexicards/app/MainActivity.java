@@ -165,18 +165,19 @@ public class MainActivity extends Activity {
            classic included, so the alias and the chosen skin never drift. */
         @JavascriptInterface
         public void setLauncherIcon(final String skin) {
-            final boolean gothic = "gothic".equals(skin);
+            /* the aliases the manifest carries, and the one this skin wants */
+            final String[] all = { "LauncherClassic", "LauncherGothic", "LauncherPrimevere" };
+            final String wanted = "gothic".equals(skin) ? "LauncherGothic"
+                : "primevere".equals(skin) ? "LauncherPrimevere"
+                : "LauncherClassic";
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     /* enable the wanted one first, so the app never sits with
                        no launcher entry at all */
-                    if (gothic) {
-                        setAliasEnabled("LauncherGothic", true);
-                        setAliasEnabled("LauncherClassic", false);
-                    } else {
-                        setAliasEnabled("LauncherClassic", true);
-                        setAliasEnabled("LauncherGothic", false);
+                    setAliasEnabled(wanted, true);
+                    for (int i = 0; i < all.length; i++) {
+                        if (!all[i].equals(wanted)) setAliasEnabled(all[i], false);
                     }
                 }
             });
@@ -272,7 +273,9 @@ public class MainActivity extends Activity {
         /* The launcher alias that started the app is the skin that was chosen
            last time, so the window behind the WebView is painted the right
            colour before a single line of JavaScript has run. */
-        setTheme(isAliasEnabled("LauncherGothic") ? R.style.GothicTheme : R.style.AppTheme);
+        if (isAliasEnabled("LauncherGothic")) setTheme(R.style.GothicTheme);
+        else if (isAliasEnabled("LauncherPrimevere")) setTheme(R.style.PrimevereTheme);
+        else setTheme(R.style.AppTheme);
         super.onCreate(savedInstanceState);
 
         initTTS(null);

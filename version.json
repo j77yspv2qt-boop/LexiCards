@@ -1,10 +1,10 @@
 {
-  "version": "2.0",
+  "version": "2.1",
   "released": "2026-10-02",
   "apk": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest/download/LexiCards.apk",
-  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.0/LexiCards.apk",
+  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.1/LexiCards.apk",
   "page": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest",
   "mirror_page": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@main/",
-  "notes": "Gothic skin refined: a grey background with near-black panels, a larger wordmark and sword, a soft glow instead of a shadow under the cards, and the sword keeps its red. New in-app guide (App info -> User guide) in Traditional or Simplified Chinese.""
+  "notes": "New Primevere skin: a spring-green theme with its own botanical artwork, page icons, wordmark and Android launcher icon. The skin picker now shows each skin's app icon instead of a colour swatch, and the user guide was trimmed."
 }
 

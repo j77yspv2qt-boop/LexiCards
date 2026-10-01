@@ -5,7 +5,7 @@
 內建 Oxford 3000/5000 完整詞庫的中文釋義、音標與例句，**沒有網路也能學**；測驗以 CEFR 程度出題，答題有干擾項、動畫與震動回饋；所有記錄只存在你自己的裝置，並且有滾動備份。
 
 - 網頁版：`index.html`（零依賴、零建置，雙擊即用）
-- Android 版：Releases 頁的 `LexiCards.apk`（v2.0，約 1.4 MB）
+- Android 版：Releases 頁的 `LexiCards.apk`（v2.1，約 3.0 MB）
 
 ---
 
@@ -161,14 +161,16 @@ App 共**四個頁面**，由左至右依序為 **Discover → My Cards → Reco
 
 ### 2.8 App skin（外觀）
 
-v1.9 內建**兩款外觀**，在 **App info → App skin** 切換，選擇會記在 `settings.skin`：
+v2.1 內建**三款外觀**，在 **App info → App skin** 切換，選擇會記在 `settings.skin`。
+選擇器裡每一列顯示的是**那一款自己的 App 圖示**（不是色塊），換過去會長什麼樣一眼就看得出來：
 
 | skin | 樣子 | 說明 |
 |---|---|---|
 | **Classic** | 經典藍 | 從 1.0 到現在的樣子，預設值 |
 | **Gothic** | 灰底 + 黑白銀 | 頁面底色是**灰色** `#3A3A3A`，卡片、面板、底部抽屜都是近黑色 `#1B1B1B` 的**獨立色塊**，因此各板塊之間一眼分得開；卡片**不投影，改成四周泛光**。文字與線條走銀灰階，只有 App bar 右上那把劍保留原本的紅色作為點綴 |
+| **Primevere** | 春綠 | 淺綠底 `#EAF4E1`、奶油色卡片 `#FBFDF7`，App bar 是 `#4E8C4E → #2F6B38` 的綠漸層。四個頁面圖示、字標、App bar 裝飾圖與 App 圖示換成同一套植物素材（大樹、玫瑰與常春藤、櫻草與報春、鈴蘭），Android 桌面圖示、狀態列與導覽列也一起換 |
 
-Gothic 另外換掉了這些（規則見下表 `icons` / `wordmarkImage` / `appbarImage` / `appIcon`）：
+Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmarkImage` / `appbarImage` / `appIcon`）：
 四個頁面標題圖示、底部頁籤圖示、最上方的 App 名稱、App bar 右上的裝飾圖，以及 App 圖示
 （網頁 favicon 與 **Android 桌面圖示**都會換）。哪裡出現該圖示就換哪裡，
 頁面標題與底部頁籤是同一組圖示，兩處都換。
@@ -187,21 +189,22 @@ Gothic 另外換掉了這些（規則見下表 `icons` / `wordmarkImage` / `appb
 選擇會記在 `settings.skin`，重開 App 仍生效；切換時會先清除上一個 skin 的
 所有覆寫，**不會互相殘留**。
 
-Gothic 的圖像素材放在 `build/skins/gothic/`（原始檔 `source/`、處理後 `out/`），
-`make.py` 會把黑背景抠成透明、縮成 App 需要的尺寸，並輸出 `build/skin_gothic.js`
-（base64 data URI）與 Android 的桌面圖示／啟動圖資源；**改圖請改 source 再重跑腳本**。
+各款的圖像素材放在 `build/skins/<skin>/`（Primevere 另有 `source/` 原始檔與 `out/` 成品），
+`make.py` 會縮圖、摳掉不透明底、輸出 `build/skin_<skin>.js`
+（base64 data URI）與 Android 的桌面圖示／啟動圖資源；**改圖請改素材再重跑腳本**。
 
-> **Android 桌面圖示**：已裝好的 App 不能就地改桌面圖示，所以 manifest 裡放了兩個
-> launcher `activity-alias`（`LauncherClassic` 預設啟用、`LauncherGothic` 預設停用），
-> 切換 skin 時由 `LexiNative.setLauncherIcon()` 用 `PackageManager` 啟用其中一個、
-> 停用另一個（`DONT_KILL_APP`，App 不會被關掉）；狀態列與導覽列則由
-> `LexiNative.setSystemBars()` 一起換色。兩者都對 classic 也會執行，所以切回去也會復原。
+> **Android 桌面圖示**：已裝好的 App 不能就地改桌面圖示，所以 manifest 裡放了三個
+> launcher `activity-alias`（`LauncherClassic` 預設啟用，`LauncherGothic` 與
+> `LauncherPrimevere` 預設停用），切換 skin 時由 `LexiNative.setLauncherIcon()` 用
+> `PackageManager` 啟用想要的那一個、停用另外兩個（`DONT_KILL_APP`，App 不會被關掉）；
+> 狀態列與導覽列則由 `LexiNative.setSystemBars()` 一起換色。
+> 兩者都對 classic 也會執行，所以切回去也會復原。
 
 ### 2.9 User guide（使用說明）
 
-**App info → User guide → Open the guide** 會彈出完整說明書，涵蓋十一個主題：
-四個頁面、Discover 的看卡與發音、存檔手勢、Records 管理、Quiz、中文繁簡、
-外觀、資料與備份、更新、Android 與桌機操作、以及幾個小提示。
+**App info → User guide → Open the guide** 會彈出完整說明書，涵蓋九個主題：
+四個頁面、Discover 的看卡與發音、存檔手勢、Records 管理、Quiz、
+外觀、資料與備份、更新、以及幾個小提示。
 
 說明書自己有語言切換（**繁體中文 / 简体中文**），跟「Definition in Chinese」是**兩個獨立設定**：
 你可以讓卡片用繁體、說明書看簡體。內文寫在 `build/guide.js`，只寫一份繁體，
@@ -365,7 +368,7 @@ Release 的資產檔名固定為 `LexiCards.apk`，App 的更新檢查就是抓�
 ```bash
 cd build
 python3 build.py      # 合併零件 → ../index.html，並檢查 JS 語法、HTML id 對照、重複宣告
-python3 smoke.py      # headless Chromium 跑 224 項功能測試（手勢、拖放、Quiz、API fallback、外觀），輸出截圖
+python3 smoke.py      # headless Chromium 跑 238 項功能測試（手勢、拖放、Quiz、API fallback、外觀），輸出截圖
 python3 shots.py      # 產生 Records / Quiz 畫面截圖（/tmp/shot-*.png）
 python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始資料，見 6.3）
 ```
@@ -394,9 +397,9 @@ python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始�
 | `build/guide.js` | 使用說明（繁中撰寫，即時轉簡中）與它的語言切換 |
 | `build/update.js` | App 內更新檢查（GitHub Release ＋ `version.json` 備援） |
 | `build/nav.js`、`build/init.js` | 頁籤導覽與啟動流程 |
-| `build/skin.js`、`build/skin_gothic.js` | 外觀系統：`SKINS` 設定表、套用 / 清除、選擇器；Gothic 的圖像（base64） |
-| `build/skins/gothic/` | Gothic 素材：`source/` 原圖、`out/` 成品、`make.py` 生成腳本 |
-| `build/smoke*.py`／`build/smoke_*.js` | 224 項功能測試 |
+| `build/skin.js`、`build/skin_gothic.js`、`build/skin_primevere.js` | 外觀系統：`SKINS` 設定表、套用 / 清除、選擇器；各款的圖像（base64） |
+| `build/skins/gothic/`、`build/skins/primevere/` | 各款素材：原圖 / `out/` 成品、`make.py` 生成腳本（同時產出 Android 資源） |
+| `build/smoke*.py`／`build/smoke_*.js` | 238 項功能測試 |
 | `build/shots.py` | 畫面截圖腳本 |
 | `build/make_data.py` | 內建詞彙表的資料管線 |
 | `version.json` | 目前版本與 APK 下載網址（更新檢查的備援來源） |
@@ -495,6 +498,20 @@ https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v1.7/LexiCards.apk
 ---
 
 ## 9. 修訂紀錄
+
+### v2.1
+
+| # | 修掉什麼 / 做了什麼 | 原因 |
+|---|---|---|
+| 1 | **第三款外觀：Primevere（春綠）** | 淺綠底 `#EAF4E1` + 奶油卡片 `#FBFDF7`、綠漸層 App bar，四個頁面圖示、字標、App bar 裝飾圖、favicon 與 **Android 桌面圖示／啟動畫面／狀態列／導覽列**全部換成同一套植物素材。素材由 `build/skins/primevere/make.py` 程式繪製（玫瑰、常春藤、櫻草、鈴蘭、大樹），輸出 `build/skin_primevere.js` 與 Android 資源，色碼直接讀 skin 表，兩邊不會漂移 |
+| 2 | **外觀選擇器改用 App 圖示** | 原本每列是一個色塊，兩款深色皮膚看起來幾乎一樣。改成顯示**那一款自己的 App 圖示**（`.skinopt__icon`，`data:` 內嵌），選之前就看得出換過去的樣子；點擊區改為整列、目前選中的列加上勾勾 |
+| 3 | **使用說明精簡** | 拿掉「中文要用繁體還是簡體」（與卡片列的繁簡切換重複）與「Android 與桌機操作」（桌機不是目標平台），外觀一節改成不逐款枚舉、直接指向 App info → App skin；十一個主題縮成九個 |
+| 4 | **`version.json` 修好** | `notes` 結尾多了一個 `"`，整份檔案是**無效 JSON**，App 內的更新備援（四條 CDN 讀 version.json）一定 parse 失敗，只能退回 GitHub API。順手升到 2.1 |
+
+> 測試：headless Chromium 功能測試由 **224 項增加到 238 項**。新增的 14 項釘住
+> 外觀選擇器改用 App 圖示後的列數與當前列標記，以及第三款外觀本身：skin 表值與
+> CSS 變數逐字一致、四頁圖示與字標換成 PNG data URI、favicon／theme-color／
+> App bar 裝飾、淺綠底與卡片對比、圖示方框尺寸、以及未知 skin 退回 Classic。
 
 ### v2.0
 

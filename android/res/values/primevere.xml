@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primevere: a light spring-green page with cream panels.
+         These are the same colours the skin table gives the running
+         app (build/skin.js), for the parts of a launch that are
+         painted before any of it has run. -->
+    <color name="primevere_window_background">#EAF4E1</color>
+    <color name="primevere_status_bar">#4E8C4E</color>
+    <color name="primevere_nav_bar">#FBFDF7</color>
+    <!-- the theme MainActivity switches to when the Primevere launcher
+         alias started it: the remembered skin is whichever alias
+         is enabled -->
+    <style name="PrimevereTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/primevere_window_background</item>
+        <item name="android:statusBarColor">@color/primevere_status_bar</item>
+        <item name="android:navigationBarColor">@color/primevere_nav_bar</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+    <!-- the starting window that alias shows; the running activity
+         then swaps to PrimevereTheme in onCreate -->
+    <style name="PrimevereSplashTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_background_primevere</item>
+        <item name="android:statusBarColor">@color/primevere_status_bar</item>
+        <item name="android:navigationBarColor">@color/primevere_nav_bar</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+</resources>

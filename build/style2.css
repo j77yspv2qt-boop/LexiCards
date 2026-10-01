@@ -267,7 +267,8 @@ body[data-revsub="records"] .fab{display:grid}
 }
 .skinopt:hover{border-color:var(--accent)}
 .skinopt.is-active{border-color:var(--primary);background:var(--accent-soft)}
-.skinopt__swatch{width:30px;height:30px;border-radius:9px;flex:none;background:var(--skin-a,var(--primary));box-shadow:inset 0 0 0 1px var(--swatch-ring,rgba(0,0,0,.08))}
+.skinopt__icon{width:34px;height:34px;flex:none;display:block;object-fit:contain;border-radius:9px;
+  box-shadow:0 0 0 1px var(--line)}
 .skinopt__text{display:flex;flex-direction:column;gap:1px;min-width:0}
 .skinopt__text b{font-size:13.5px;color:var(--text)}
 .skinopt__text i{font-style:normal;font-size:11px;color:var(--muted)}
@@ -277,6 +278,15 @@ body[data-revsub="records"] .fab{display:grid}
    values and not a second stylesheet.  The defaults are the ones above; a skin
    overrides only what it changes. */
 .appbar{background:linear-gradient(135deg,var(--appbar-from,var(--primary)),var(--appbar-to,var(--primary-dark)))}
+/* The page-title and tab-bar marks are drawn at one size, which is the size
+   classic's line icons need.  A skin whose icons are pictures rather than
+   strokes may want more room for them, so the two boxes and the two marks
+   inside them are reachable as well: --pageicon-box / --pageicon-art and
+   --tabicon-box / --tabicon-art. */
+.pagehead__icon{width:var(--pageicon-box,30px);height:var(--pageicon-box,30px)}
+.pagehead__icon svg,.pagehead__icon img{width:var(--pageicon-art,19px);height:var(--pageicon-art,19px)}
+.tabbar__icon{height:var(--tabicon-box,23px)}
+.tabbar__icon svg,.tabbar__icon img{width:var(--tabicon-art,21px);height:var(--tabicon-art,21px)}
 .chip--word{background:var(--chip-word-bg,#E3F0FF);color:var(--chip-word-fg,#0D47A1)}
 .chip--phrase{background:var(--chip-phrase-bg,#E8F5E9);color:var(--chip-phrase-fg,#1B5E20)}
 .chip--pattern{background:var(--chip-pattern-bg,#F3E5F5);color:var(--chip-pattern-fg,#4A148C)}

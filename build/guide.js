@@ -69,18 +69,10 @@ const GUIDE_SECTIONS = [
     ]
   },
   {
-    h: '中文要用繁體還是簡體',
-    p: ['App info → Definition in Chinese 可切換 Traditional / Simplified。' +
-      '卡片釋義、Quiz 選項與例句譯文都會立即跟著換。']
-  },
-  {
     h: '外觀（App skin）',
-    p: ['App info → App skin 可切換外觀，選擇會記住：'],
-    ul: [
-      'Classic：經典藍（預設）',
-      'Gothic：灰底、黑白銀的獨立區塊，卡片四周是泛光而不是陰影',
-      'Android 版切換後，桌面圖示、狀態列與導覽列顏色也會一起換'
-    ]
+    p: ['App info → App skin 可更換整個 App 的外觀：配色、四個頁面的圖示、LexiCards 字標與 ' +
+      'App 圖示會整組一起換，選擇會記住，重開 App 仍生效' +
+      '（Android 版的桌面圖示、狀態列與導覽列顏色也一起換）。']
   },
   {
     h: '資料與備份',
@@ -100,15 +92,6 @@ const GUIDE_SECTIONS = [
     p: ['App info → Updates → Check for updates 會向 GitHub 查最新版本；' +
       '有新版時可用 Download update 下載 APK，或用 Mirror download 走備援線路。' +
       'Releases page 會用瀏覽器開啟發佈頁。']
-  },
-  {
-    h: 'Android 與桌機操作',
-    ul: [
-      'Android 返回鍵：先關閉面板 → 再退回上一頁 → 在第一頁才離開 App',
-      'Android 版的發音使用系統 TTS，沒有音檔時也能唸出來',
-      '桌機：← / → 換卡、S 存檔、R 洗牌、PageUp / PageDown 換頁、Esc 關閉面板',
-      'Quiz 桌機：1 / 2 / 3 選答案，Enter 或空白鍵跳下一題'
-    ]
   },
   {
     h: '小提示',

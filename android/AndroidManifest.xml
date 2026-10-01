@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.lexicards.app"
-    android:versionCode="9"
-    android:versionName="2.0">
+    android:versionCode="10"
+    android:versionName="2.1">
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -35,10 +35,10 @@
             android:theme="@style/SplashTheme"
             android:windowSoftInputMode="adjustResize" />
 
-        <!-- Two launcher aliases, one per skin.  An installed app's home-screen
-             icon comes from the manifest, so it cannot be repainted in place:
-             the skin is chosen by enabling exactly one alias and disabling the
-             other (PackageManager, from LexiNative.setLauncherIcon on the web
+        <!-- One launcher alias per skin.  An installed app's home-screen icon
+             comes from the manifest, so it cannot be repainted in place: the
+             skin is chosen by enabling exactly one alias and disabling the
+             others (PackageManager, from LexiNative.setLauncherIcon on the web
              side, which runs for classic too).  The classic alias starts
              enabled, so a fresh install looks exactly as it always has. -->
         <activity-alias
@@ -65,6 +65,21 @@
             android:roundIcon="@mipmap/ic_launcher_gothic_round"
             android:targetActivity=".MainActivity"
             android:theme="@style/GothicSplashTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherPrimevere"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_primevere"
+            android:label="@string/app_name"
+            android:roundIcon="@mipmap/ic_launcher_primevere_round"
+            android:targetActivity=".MainActivity"
+            android:theme="@style/PrimevereSplashTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
