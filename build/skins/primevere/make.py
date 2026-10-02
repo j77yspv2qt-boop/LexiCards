@@ -6,7 +6,8 @@ gilt.  The artwork arrives as antiques - a tree, a swan, a rose, a robin, a
 garland of bellflowers, the calligraphic wordmark and the launcher tile -
 already cut out on transparency.  The tile is a squircle drawn to the very
 edge of its square, so it drops in as it is: nothing to flood-fill, nothing
-to crop.
+to crop - except on the Android launcher, where only the middle 72dp of the
+108dp adaptive-icon canvas is ever shown (see FOREGROUND_ART).
 
 Nothing is recoloured here.  Gothic drove its art onto the grey axis because a
 monochrome skin demands it; this skin is the opposite, so every piece keeps the
@@ -16,10 +17,12 @@ page icons: they sit next to a page title at 19-27 px, so they are rendered
 square and centred on a transparent canvas (see PAGE_ICONS) instead of being
 cropped to whatever shape a render came in.
 
-The Android chrome - the window behind the WebView, the two system bars, the
-splash gradient and the launcher tile - is painted before any of the app has
-run, so its colours are read out of the skin's own table in build/skin.js (see
-skin_token) rather than written a second time here.
+The Android chrome - the window behind the WebView, the two system bars and the
+splash gradient - is painted before any of the app has run, so its colours are
+read out of the skin's own table in build/skin.js (see skin_token) rather than
+written a second time here.  The launcher's backdrop is the one exception: it
+has to continue the tile's own painted gradient, so it is sampled from the
+artwork instead (see background_xml).
 
 Outputs
   out/*.png                  the in-app images (also committed, so the skin can
@@ -74,8 +77,10 @@ def skin_token(name, fallback):
     return found.group(1) if found else fallback
 
 
-# the Android chrome colours, read from the skin table (see skin_token)
-ICON_BACKGROUND = skin_token("--primary-dark", "#2F6B38")   # behind the launcher art
+# The Android chrome colours, read from the skin table (see skin_token).
+# The launcher's backdrop is not one of them: it has to continue the tile's
+# own painted gradient, so it is sampled from the artwork instead - see
+# background_xml.
 SPLASH_FROM = skin_token("--page-top", "#F3F9EC")
 SPLASH_TO = skin_token("--page-bottom", "#DCECCF")
 WINDOW_BG = skin_token("--bg", "#EAF4E1")
@@ -88,13 +93,25 @@ LAUNCHER_DP = 48
 FOREGROUND_DP = 108
 SPLASH_DP = 96
 
-# The launcher art is the whole tile, not a mark floating in a field, so the
-# foreground layer IS the tile: at 1.0 it covers the 108dp canvas and the
-# Android mask takes the middle - the card and its green L, the heart of the
-# drawing.  The tile arrives shaped as a squircle already cut on transparency,
-# so the canvas edge shows the launcher's own backdrop instead of a straight
-# cut through the artwork.
-FOREGROUND_ART = 1.0
+# The launcher art is the whole tile, not a mark floating in a field - but the
+# foreground layer covers the visible window, not the whole canvas.  Android
+# lays an adaptive icon out on 108dp and the launcher only ever shows the
+# middle 72dp of it, through a mask of its own choosing (circle, squircle or
+# rounded square).  At 1.0 that took the middle two thirds of the tile, which
+# cut the wreath in half on the home screen while the card grew into the whole
+# icon (the screenshot in README's v2.1.1 note).  The tile is therefore drawn
+# at 73dp - a hair over the 72dp window - so its paint always reaches past the
+# mask: the home screen shows the PNG as it stands, edge to edge, with no
+# canvas of the launcher's left beside it to seam against (at exactly 72dp the
+# source's anti-aliased rim left a one-pixel band of backdrop showing, and on
+# the left edge it stepped 27/255 away from the tile's own colour).  The size
+# is set by what the mask may hide, not by what it shows: measured against a
+# One UI squircle nothing of the drawing falls outside it - only the tile's own
+# corner background does, which the mask hides by definition - while a circular
+# mask shaves the corners, the circle's shape rather than a crop added here.
+# The background layer is therefore never visible; it stays as the adaptive
+# icon's required second layer, carrying the tile's painted gradient.
+FOREGROUND_ART = 73.0 / 108.0
 
 # the four page icons: square artwork, centred on a transparent canvas
 PAGE_ICONS = [("discover", 128), ("mine", 128), ("records", 128), ("quiz", 128)]
@@ -327,11 +344,78 @@ ADAPTIVE = ('<?xml version="1.0" encoding="utf-8"?>\n'
             '    <foreground android:drawable="@mipmap/ic_launcher_primevere_foreground" />\n'
             '</adaptive-icon>\n')
 
-BACKGROUND = ('<?xml version="1.0" encoding="utf-8"?>\n'
-              '<shape xmlns:android="http://schemas.android.com/apk/res/android"\n'
-              '    android:shape="rectangle">\n'
-              '    <solid android:color="%s" />\n'
-              '</shape>\n' % ICON_BACKGROUND)
+def hex_colour(rgb):
+    """A clamped RGB triple as the #RRGGBB the Android resources want."""
+    return "#%02X%02X%02X" % tuple(max(0, min(255, int(round(c)))) for c in rgb)
+
+
+def tile_background(width, height, rows, dx, dy):
+    """The tile's own painted colour where its gradient meets its edge.
+
+    Walks from the centre outwards along (dx, dy) and keeps the last opaque
+    pixel - the outermost paint, past the wreath - because that is the colour
+    the launcher's backdrop has to carry on with."""
+    cx, cy = width // 2, height // 2
+    best = None
+    for i in range(max(width, height)):
+        x = int(round(cx + dx * i))
+        y = int(round(cy + dy * i))
+        if not (0 <= x < width and 0 <= y < height):
+            break
+        o = x * 4
+        if rows[y][o + 3] >= 250:
+            best = (rows[y][o], rows[y][o + 1], rows[y][o + 2])
+    return best
+
+
+def background_xml(width, height, rows):
+    """The launcher backdrop: the tile's own painted gradient, carried past its edge.
+
+    At 72dp the tile meets the window on every edge, so the canvas the mask can
+    still show is where it curves inside the window at the corners, plus the
+    tile's anti-aliased rim; a flat colour there would ring the artwork in a
+    colour it never draws with - the tile's edge runs light green at the top
+    left and olive at the bottom right.  Both samples sit on that same diagonal
+    and at the same distance from the centre, so together they are the two
+    stops of the gradient the tile was painted with.  Android draws its
+    gradient across the whole 108dp drawable (angle 315, corner to corner),
+    which reaches further out than the 72dp tile, so each stop is pushed out by
+    the same factor: the line still passes
+    through both sampled colours exactly where the tile ends."""
+    top = tile_background(width, height, rows, 0, -1)
+    left = tile_background(width, height, rows, -1, 0)
+    right = tile_background(width, height, rows, 1, 0)
+    bottom = tile_background(width, height, rows, 0, 1)
+    if not all([top, left, right, bottom]):
+        raise SystemExit("primevere: the tile has no opaque edge to sample")
+    start = [(top[i] + left[i]) / 2.0 for i in range(3)]     # the top-left half
+    end = [(bottom[i] + right[i]) / 2.0 for i in range(3)]   # the bottom-right half
+    reach = (2.0 - FOREGROUND_ART) / 4.0    # the tile edge, as a share of the diagonal
+    push = reach / (1.0 - 2.0 * reach)      # ... and out to the drawable's own corners
+    span = [end[i] - start[i] for i in range(3)]
+    # Each channel only pushes out as far as 8-bit gamut allows: the top-left
+    # stop runs light, and clipping one channel to white would bend the line
+    # away from the tile's edge exactly where it has to meet it.
+    step = []
+    for i in range(3):
+        p = push
+        if span[i] < 0:
+            p = min(p, (255.0 - start[i]) / -span[i], end[i] / -span[i])
+        elif span[i] > 0:
+            p = min(p, start[i] / span[i], (255.0 - end[i]) / span[i])
+        step.append(max(0.0, p))
+    start = [start[i] - step[i] * span[i] for i in range(3)]
+    end = [end[i] + step[i] * span[i] for i in range(3)]
+    print("  backdrop gradient %s -> %s" % (hex_colour(start), hex_colour(end)))
+    return ('<?xml version="1.0" encoding="utf-8"?>\n'
+            '<shape xmlns:android="http://schemas.android.com/apk/res/android"\n'
+            '    android:shape="rectangle">\n'
+            '    <gradient\n'
+            '        android:type="linear"\n'
+            '        android:angle="315"\n'
+            '        android:startColor="%s"\n'
+            '        android:endColor="%s" />\n'
+            '</shape>\n' % (hex_colour(start), hex_colour(end)))
 
 SPLASH = ('<?xml version="1.0" encoding="utf-8"?>\n'
           '<layer-list xmlns:android="http://schemas.android.com/apk/res/android">\n'
@@ -457,7 +541,8 @@ def android(tile_w, tile_h, tile):
     res = os.path.join(ANDROID, "res")
     write_text(os.path.join(res, "mipmap-anydpi-v26", "ic_launcher_primevere.xml"), ADAPTIVE)
     write_text(os.path.join(res, "mipmap-anydpi-v26", "ic_launcher_primevere_round.xml"), ADAPTIVE)
-    write_text(os.path.join(res, "drawable", "ic_launcher_primevere_background.xml"), BACKGROUND)
+    write_text(os.path.join(res, "drawable", "ic_launcher_primevere_background.xml"),
+               background_xml(tile_w, tile_h, tile))
     write_text(os.path.join(res, "drawable", "splash_background_primevere.xml"), SPLASH)
     write_text(os.path.join(res, "values", "primevere.xml"), PRIMEVERE_VALUES)
     print("  adaptive-icon, background, splash and PrimevereSplashTheme written")
