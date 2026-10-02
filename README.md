@@ -5,7 +5,7 @@
 內建 Oxford 3000/5000 完整詞庫的中文釋義、音標與例句，**沒有網路也能學**；測驗以 CEFR 程度出題，答題有干擾項、動畫與震動回饋；所有記錄只存在你自己的裝置，並且有滾動備份。
 
 - 網頁版：`index.html`（零依賴、零建置，雙擊即用）
-- Android 版：Releases 頁的 `LexiCards.apk`（v2.1.1，約 3.3 MB）
+- Android 版：Releases 頁的 `LexiCards.apk`（v2.1.2，約 3.0 MB）
 
 ---
 
@@ -305,7 +305,7 @@ Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmark
 
 ## 5. Android APK
 
-- **版本**：2.1.1（versionCode 11，minSdk 24 / targetSdk 35），約 3.3 MB，零額外依賴
+- **版本**：2.1.2（versionCode 12，minSdk 24 / targetSdk 35），約 3.0 MB，零額外依賴
 - **權限**：僅 `INTERNET`、`ACCESS_NETWORK_STATE`、`VIBRATE`
 - **安裝**：從 Releases 下載 APK → 允許安裝未知來源 → 完成
 - **升級**：直接安裝新版本即可覆蓋，記錄保留（見第 4 節）
@@ -499,6 +499,17 @@ https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v1.7/LexiCards.apk
 ---
 
 ## 9. 修訂紀錄
+
+### v2.1.2
+
+| # | 修掉什麼 / 做了什麼 | 原因 |
+|---|---|---|
+| 1 | **Primevere 圖示改成「上載的 PNG 原樣頂滿可視範圍」** | adaptive-icon 畫在 108dp 畫布上，但桌面只顯示中間 72dp、再套自己選的遮罩：v2.1.1 把瓦片畫滿 108dp，等於只看得到中間三分之二 — 花圈被切一整圈、卡片撐滿圖示（實測 61,381 個不透明像素落在遮罩外，其中 20,526 個是圖案）。`FOREGROUND_ART` 改為 **73/108**：剛好 72dp 會因來源的抗鋸齒邊緣露出 1px 底色（左緣色差 27/255），74dp 又開始切到圖案，73dp 則完全蓋住視窗。實測 One UI squircle 遮罩外只剩 2,551 個瓦片自己的邊角底色、**圖案 0 個**，接縫 0（僅 22 個半透明 AA 像素、色差 ≤9/255）；圓形遮罩的手機四角會被削掉 2,529 個花瓣像素，那是圓形遮罩本身的形狀，不是多裁的 |
+| 2 | **啟動圖示背板改採瓦片自己的漸層色** | 原本是平塗深綠 `#2F6B38`，會把圖案框在它從未畫過的顏色裡。`background_xml()` 沿「左上→右下」對角取瓦片邊緣色（`#B2DEA2`／`#70A96A`），推出 315 度漸層 `#F2FFD8 → #308834`，每通道只推到 8-bit 色域內。73dp 之下背板不會露出，但它是 adaptive icon 必需的第二層，保留作底 |
+
+> 只換圖示、不動功能，所以版本號走 patch（2.1.1 → 2.1.2）、`versionCode` 12。
+> `make.py` 可重現（重跑一次產物逐位元相同），headless Chromium 功能測試 **238/238** 通過，
+> APK 內的圖示資產與來源逐像素一致。
 
 ### v2.1.1
 

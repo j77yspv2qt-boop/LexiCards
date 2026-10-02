@@ -1,10 +1,10 @@
 {
-  "version": "2.1.1",
+  "version": "2.1.2",
   "released": "2026-10-02",
   "apk": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest/download/LexiCards.apk",
-  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.1.1/LexiCards.apk",
+  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.1.2/LexiCards.apk",
   "page": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest",
   "mirror_page": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@main/",
-  "notes": "Primevere app icon fixed: the launcher art is the background-removed squircle now, drawn to the edge of its square, so the Android adaptive-icon mask no longer crops into the wreath. Everything else is unchanged from 2.1."
+  "notes": "Primevere app icon shown exactly as uploaded: the tile now fills the 72dp visible window (drawn at 73/108, a hair over it) so the launcher mask no longer crops the wreath and no backdrop seam can show - 0 artwork pixels lost behind a One UI squircle, against 20,526 in 2.1.1. Everything else is unchanged."
 }
 
