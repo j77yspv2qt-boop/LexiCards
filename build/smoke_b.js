@@ -1109,6 +1109,258 @@
       exampleZhHTML({ term: 'hike', zh: ['n. 徒步旅行'], example: 'We are to go on a hike tomorrow.',
         exampleZh: '明天我們要去健行。' }).indexOf('健行') > 0,
       exampleZhHTML({ term: 'hike', zh: ['n. 徒步旅行'], example: 'We are to go on a hike tomorrow.', exampleZh: '明天我們要去健行。' }));
+
+    /* ---- 18. v2.2: spaced repetition, daily goal, wrong list ---- */
+    var DAY = 86400000;
+
+    /* (a) applySrs: the schedule a review writes */
+    var srsRec = findRecordByTerm('serendipity') || state.records[0];
+    srsRec.stats = { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0 };
+    touchStats(srsRec, true);
+    step('srs: the first right answer schedules tomorrow',
+      srsRec.stats.interval === 1 && srsRec.stats.dueAt > Date.now() &&
+      srsRec.stats.dueAt <= Date.now() + 2 * DAY,
+      'interval=' + srsRec.stats.interval + ', due in ' +
+      Math.round((srsRec.stats.dueAt - Date.now()) / 3600000) + 'h');
+    step('srs: ease starts at 2.5', srsRec.stats.ease === 2.5, srsRec.stats.ease);
+    touchStats(srsRec, true);
+    step('srs: another success stretches the interval', srsRec.stats.interval > 1,
+      srsRec.stats.interval);
+    touchStats(srsRec, false);
+    step('srs: a miss resets the interval and lowers the ease',
+      srsRec.stats.interval === 1 && srsRec.stats.ease < 2.5 && srsRec.stats.ease >= 1.3,
+      'interval=' + srsRec.stats.interval + ', ease=' + srsRec.stats.ease);
+    step('srs: a miss keeps the word due within two days',
+      srsRec.stats.dueAt <= Date.now() + 2 * DAY,
+      Math.round((srsRec.stats.dueAt - Date.now()) / 3600000) + 'h');
+
+    /* (b) records saved by an older version gain a schedule on load */
+    var stored = JSON.parse(localStorage.getItem('lexi.records.v1') || '[]');
+    stored.push({ id: 'legacy1', term: 'legacyword', type: 'word', zh: ['\u6e2c\u8a66\u7528\u8a5e'],
+      en: [], phonetic: '', note: '', tags: [], source: 'manual',
+      createdAt: Date.now() - 10 * DAY, updatedAt: Date.now() - 10 * DAY,
+      stats: { seen: 2, correct: 1, wrong: 1, streak: 0,
+               lastReviewedAt: Date.now() - 5 * DAY } });
+    localStorage.setItem('lexi.records.v1', JSON.stringify(stored));
+    loadAll();
+    refreshRecords();
+    var legacy = findRecordByTerm('legacyword');
+    step('srs: old records gain ease/interval/dueAt on load, no migration step',
+      !!legacy && !!legacy.stats.dueAt && legacy.stats.ease === 2.5 &&
+      legacy.stats.interval === 0,
+      legacy ? 'ease=' + legacy.stats.ease + ' interval=' + legacy.stats.interval : 'missing');
+    step('srs: a word last reviewed five days ago comes back due',
+      !!legacy && legacy.stats.dueAt <= Date.now(),
+      legacy ? new Date(legacy.stats.dueAt).toISOString().slice(0, 10) : 'missing');
+    step('srs: the daily counters survived the reload',
+      typeof activityToday().reviewed === 'number', activityToday().reviewed);
+
+    /* (c) the due pool and the Due today scope */
+    var dueRec = findRecordByTerm('resilient') || state.records[0];
+    var laterRec = state.records.filter(function (r) {
+      return r !== dueRec && r.zh && r.zh.length;
+    })[0];
+    dueRec.stats.dueAt = Date.now() - 1000;
+    if (laterRec) laterRec.stats.dueAt = Date.now() + 40 * DAY;
+    saveRecords();
+    step('srs: dueRecords keeps only overdue words',
+      dueRecords().length > 0 && dueRecords().every(isDueRecord) &&
+      dueRecords().indexOf(dueRec) >= 0 &&
+      (!laterRec || dueRecords().indexOf(laterRec) < 0),
+      dueRecords().length + ' due');
+    step('srs: poolSizeFor counts the due scope the same way',
+      poolSizeFor('due') === dueRecords().length, poolSizeFor('due'));
+    step('quiz: the Due today and My wrong list scopes are offered',
+      !!document.querySelector('#quizScope option[value="due"]') &&
+      !!document.querySelector('#quizScope option[value="wrong"]'));
+    setQuizScope('due');
+    await wait(140);
+    step('srs: the due scope is accepted and the select follows it',
+      quizScope() === 'due' && document.getElementById('quizScope').value === 'due',
+      quizScope());
+    step('srs: pool info reads like the due scope',
+      /due/.test(document.getElementById('quizPoolInfo').textContent),
+      document.getElementById('quizPoolInfo').textContent);
+    step('srs: a question is built from the due scope', !!state.round.current,
+      state.round.current ? state.round.current.term : '');
+    setQuizScope('records');
+    await wait(140);
+    /* (d) the wrong list is derived from stats, not stored twice */
+    var missRec = findRecordByTerm('legacyword') || state.records[1];
+    missRec.stats.wrong = 2; missRec.stats.correct = 0;
+    var gradRec = findRecordByTerm('resilient');
+    if (gradRec) { gradRec.stats.wrong = 1; gradRec.stats.correct = 3; }
+    saveRecords();
+    step('wrong list: a word with more misses joins the list',
+      wrongRecords().indexOf(missRec) >= 0, wrongRecords().length + ' in the list');
+    step('wrong list: a word with more hits has graduated',
+      !gradRec || wrongRecords().indexOf(gradRec) < 0);
+    step('wrong list: poolSizeFor counts the same words',
+      poolSizeFor('wrong') === wrongRecords().length, poolSizeFor('wrong'));
+    setQuizScope('wrong');
+    await wait(140);
+    step('wrong list: the scope asks from the list and labels it',
+      quizScope() === 'wrong' &&
+      /relearn/.test(document.getElementById('quizPoolInfo').textContent),
+      document.getElementById('quizPoolInfo').textContent);
+    step('wrong list: a question is built from it', !!state.round.current,
+      state.round.current ? state.round.current.term : '');
+    setQuizScope('records');
+    await wait(140);
+
+    /* (e) due words beat fresh words when quizzing - deterministically */
+    var dueOne = findRecordByTerm('legacyword') || state.records[0];
+    var notDue = findRecordByTerm('resilient');
+    dueOne.stats.dueAt = Date.now() - 1000;
+    if (notDue) notDue.stats.dueAt = Date.now() + 30 * DAY;
+    var pairPool = [dueOne, notDue].filter(Boolean).map(recordQuizItem);
+    state.settings.srsEnabled = true;
+    state.round.recent = [];
+    var prevCurrent = state.round.current;
+    state.round.current = null;
+    step('srs: the due filter narrows a pool to overdue words',
+      duePreferred(pairPool).length === 1 &&
+      duePreferred(pairPool)[0].term === dueOne.term,
+      duePreferred(pairPool).length + ' of ' + pairPool.length);
+    var srsPick = pickWeighted(pairPool);
+    step('srs: quizzing picks the due word while the switch is on',
+      !!srsPick && srsPick.term === dueOne.term, srsPick ? srsPick.term : '');
+    state.settings.srsEnabled = false;
+    step('srs: switch off restores the plain pool',
+      duePreferred(pairPool).length === pairPool.length,
+      duePreferred(pairPool).length);
+    state.settings.srsEnabled = true;
+    saveSettings();
+    state.round.current = prevCurrent;
+
+    /* (f) the daily counters behind the ring */
+    var beforeToday = activityToday().reviewed;
+    recordActivity(true);
+    recordActivity(false);
+    step('daily: answered questions count toward today',
+      activityToday().reviewed === beforeToday + 2 && activityToday().correct >= 1,
+      activityToday().reviewed + ' reviewed, ' + activityToday().correct + ' correct');
+    var y1 = new Date(); y1.setDate(y1.getDate() - 1);
+    state.activity[dayKey(y1)] = { reviewed: 4, correct: 3 };
+    step('daily: yesterday + today give a streak of at least 2',
+      activityStreak() >= 2, activityStreak());
+    var tKey = dayKey();
+    var savedToday = state.activity[tKey];
+    delete state.activity[tKey];
+    step('daily: an empty today still counts yesterday\u2019s streak',
+      activityStreak() >= 1, activityStreak());
+    state.activity[tKey] = savedToday || { reviewed: 0, correct: 0 };
+    saveActivity();
+    step('daily: week accuracy is null with nothing reviewed, else 0-100',
+      weekAccuracy() === null || (weekAccuracy() >= 0 && weekAccuracy() <= 100),
+      String(weekAccuracy()));
+    renderDailyCard();
+    step('daily: the ring shows a percentage',
+      /^\d+%$/.test(document.getElementById('dailyPct').textContent),
+      document.getElementById('dailyPct').textContent);
+    step('daily: the counter reads reviewed / goal',
+      document.getElementById('dailyCount').textContent.indexOf(String(activityToday().reviewed)) === 0,
+      document.getElementById('dailyCount').textContent);
+    step('daily: the summary card is visible while records exist',
+      document.getElementById('dailyCard').hidden === false);
+    step('daily: the due count on the card matches the due pool',
+      document.getElementById('dailyDue').textContent === String(dueRecords().length),
+      document.getElementById('dailyDue').textContent);
+    /* (g) the goal field and the spaced repetition switch */
+    var goalEl = document.getElementById('fDailyGoal');
+    step('daily: Data & settings offers a goal field', !!goalEl);
+    if (goalEl) {
+      syncSettingsUI();
+      step('daily: the goal field shows the saved value',
+        goalEl.value === String(state.settings.dailyGoal), goalEl.value);
+      goalEl.value = '50';
+      goalEl.dispatchEvent(new Event('input'));
+      step('daily: typing a new goal saves it',
+        state.settings.dailyGoal === 50, state.settings.dailyGoal);
+      renderDailyCard();
+      step('daily: the ring follows the new goal',
+        document.getElementById('dailyCount').textContent ===
+        activityToday().reviewed + ' / 50',
+        document.getElementById('dailyCount').textContent);
+      goalEl.value = '20';
+      goalEl.dispatchEvent(new Event('input'));
+      step('daily: the goal can be put back', state.settings.dailyGoal === 20,
+        state.settings.dailyGoal);
+    }
+    step('srs: Data & settings offers the spaced repetition switch',
+      !!document.getElementById('swSrs'));
+    document.getElementById('swSrs').click();
+    step('srs: the switch turns due-first quizzing off',
+      state.settings.srsEnabled === false, String(state.settings.srsEnabled));
+    document.getElementById('swSrs').click();
+    step('srs: the switch comes back on', state.settings.srsEnabled === true,
+      String(state.settings.srsEnabled));
+
+    /* (h) Records: the Due today sort and the due marker */
+    var sortEl = document.getElementById('sortRecords');
+    step('records: the Due today sort is offered',
+      !!sortEl && !!sortEl.querySelector('option[value="due"]'));
+    sortEl.value = 'due';
+    renderRecordsList();
+    step('records: due sort puts the most overdue row first', (function () {
+      var rows = document.querySelectorAll('#recordsList .item');
+      if (rows.length < 2) return false;
+      var first = findRecordById(rows[0].getAttribute('data-id'));
+      var last = findRecordById(rows[rows.length - 1].getAttribute('data-id'));
+      return first && last &&
+        ((first.stats && first.stats.dueAt) || 0) <= ((last.stats && last.stats.dueAt) || 0);
+    })());
+    step('records: an overdue row carries the Due today marker', (function () {
+      var rows = document.querySelectorAll('#recordsList .item');
+      for (var i = 0; i < rows.length; i++) {
+        var r = findRecordById(rows[i].getAttribute('data-id'));
+        if (r && isDueRecord(r)) return !!rows[i].querySelector('.item__due');
+      }
+      return false;
+    })());
+    step('records: a word resting for 30 days is not marked', (function () {
+      var rows = document.querySelectorAll('#recordsList .item');
+      for (var i = 0; i < rows.length; i++) {
+        var r = findRecordById(rows[i].getAttribute('data-id'));
+        if (r && r.stats && r.stats.dueAt > Date.now() + DAY) {
+          return !rows[i].querySelector('.item__due');
+        }
+      }
+      return false;
+    })());
+    sortEl.value = 'newest';
+    renderRecordsList();
+
+    /* (i) the summary card drives the quiz, and answers feed the ring */
+    var startBtn = document.getElementById('btnStartDue');
+    step('daily: the start button offers the due queue',
+      !!startBtn && /due/.test(startBtn.textContent),
+      startBtn ? startBtn.textContent : '');
+    if (startBtn && !startBtn.disabled) {
+      startBtn.click();
+      await wait(140);
+      step('daily: the start button switches the quiz to the due scope',
+        quizScope() === 'due' && document.getElementById('quizScope').value === 'due',
+        quizScope());
+    } else {
+      step('daily: the start button switches the quiz to the due scope',
+        false, 'button disabled with ' + dueRecords().length + ' due');
+    }
+    setQuizScope('records');
+    await wait(140);
+    var reviewedBeforeAnswer = activityToday().reviewed;
+    if (state.round.current) {
+      var okIdx = -1;
+      for (var oi = 0; oi < state.round.current.options.length; oi++) {
+        if (state.round.current.options[oi].correct) { okIdx = oi; break; }
+      }
+      answerQuiz(okIdx);
+      step('daily: an answered question feeds the ring',
+        activityToday().reviewed === reviewedBeforeAnswer + 1,
+        activityToday().reviewed);
+    } else {
+      step('daily: an answered question feeds the ring', false, 'no question');
+    }
   } catch (err) {
     R.ok = false;
     R.steps.push({ name: 'exception thrown', pass: false, info: String((err && err.stack) || err).slice(0, 400) });

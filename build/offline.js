@@ -65,6 +65,8 @@ function recordsPool() {
 }
 function poolSizeFor(scope) {
   if (scope === 'records') return recordsPool().length;
+  if (scope === 'due') return dueRecords().length;
+  if (scope === 'wrong') return wrongRecords().length;
   return levelPool(scope).length;
 }
 

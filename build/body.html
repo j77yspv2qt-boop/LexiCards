@@ -103,6 +103,7 @@
           <option value="az">A to Z</option>
           <option value="wrong">Most missed</option>
           <option value="seen">Most reviewed</option>
+          <option value="due">Due today</option>
         </select>
         <button type="button" class="iconbtn" id="btnData" aria-label="Data and settings">&#8943;</button>
       </div>
@@ -126,9 +127,24 @@
       </div>
 
       <div class="quiz" id="quizPane">
+        <!-- v2.2 summary card: goal ring, streak, due count, week accuracy -->
+        <div class="dailycard" id="dailyCard" hidden>
+          <div class="dailycard__ring" id="dailyRing"><span id="dailyPct">0%</span></div>
+          <div class="dailycard__info">
+            <div class="dailycard__stats">
+              <span class="dailycard__stat"><b id="dailyCount">0 / 20</b><small>Today</small></span>
+              <span class="dailycard__stat"><b id="dailyStreak">0</b><small>Day streak</small></span>
+              <span class="dailycard__stat"><b id="dailyDue">0</b><small>Due now</small></span>
+              <span class="dailycard__stat"><b id="dailyWeek">&mdash;</b><small>7-day acc.</small></span>
+            </div>
+            <button type="button" class="btn btn--primary btn--sm dailycard__go" id="btnStartDue">Review due words</button>
+          </div>
+        </div>
         <div class="toolbar toolbar--quiz">
           <select class="select" id="quizScope" aria-label="Quiz range">
             <option value="records">My saved words</option>
+            <option value="due">Due today</option>
+            <option value="wrong">My wrong list</option>
             <option value="A1">A1 &middot; Beginner</option>
             <option value="A2">A2 &middot; Elementary</option>
             <option value="B1">B1 &middot; Intermediate</option>
@@ -299,6 +315,14 @@
         <div class="switchrow" id="swTricky" role="switch" aria-checked="true" tabindex="0">
           <span>Tricky Quiz options (confusable words as distractors)</span><span class="switch"></span>
         </div>
+        <div class="switchrow" id="swSrs" role="switch" aria-checked="true" tabindex="0">
+          <span>Spaced repetition (quiz due words first)</span><span class="switch"></span>
+        </div>
+        <label class="field">
+          <span class="field__label">Daily goal (questions per day)</span>
+          <input type="number" class="input" id="fDailyGoal" min="5" max="200" step="5" inputmode="numeric">
+          <span class="field__hint">Shown as the ring on the Quiz page, together with your streak.</span>
+        </label>
         <div class="field">
           <span class="field__label">Storage</span>
           <span class="field__hint" id="storageInfo"></span>

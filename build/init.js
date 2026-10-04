@@ -45,6 +45,7 @@ function init() {
   rebuildDeck();
   refreshRecords();
   updateQuizStats();
+  renderDailyCard();
 
   if (!storageOK) {
     showToast('This browser blocks local storage - records will not persist.', 'warn', 4200);

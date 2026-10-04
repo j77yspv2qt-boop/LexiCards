@@ -1,10 +1,10 @@
 {
-  "version": "2.1.2",
-  "released": "2026-10-02",
+  "version": "2.2",
+  "released": "2026-10-05",
   "apk": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest/download/LexiCards.apk",
-  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.1.2/LexiCards.apk",
+  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.2/LexiCards.apk",
   "page": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest",
   "mirror_page": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@main/",
-  "notes": "Primevere app icon shown exactly as uploaded: the tile now fills the 72dp visible window (drawn at 73/108, a hair over it) so the launcher mask no longer crops the wreath and no backdrop seam can show - 0 artwork pixels lost behind a One UI squircle, against 20,526 in 2.1.1. Everything else is unchanged."
+  "notes": "Spaced repetition: every saved word now carries a next-review date (SM-2 style - right answers stretch the interval up to half a year, a miss brings it back to tomorrow), the Quiz asks due words first, Records gains a Due today sort and marker, and the quiz range gains Due today and My wrong list scopes. The Quiz page opens with a summary card: daily-goal ring, day streak, due count, 7-day accuracy and a one-tap start. Goal and the new switch live in Data & settings."
 }
 

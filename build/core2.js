@@ -148,6 +148,7 @@ const state = {
   cache     : {},
   tr        : {},          // cache of machine translations, keyed by source text
   custom    : [],
+  activity  : {},          // per-day review counters: { 'YYYY-MM-DD': {reviewed, correct} }
   page      : 'discover',   // which of the four pages is on screen
   dictSub   : 'discover',
   revSub    : 'records',
@@ -183,7 +184,21 @@ function loadAll() {
       Store.write(LS_KEYS.records, state.records);
     }
   }
-  state.records.forEach(r => { if (!r.stats) r.stats = { seen:0, correct:0, wrong:0, streak:0, lastReviewedAt:0 }; });
+  state.records.forEach(r => {
+    if (!r.stats) r.stats = { seen:0, correct:0, wrong:0, streak:0, lastReviewedAt:0 };
+    const st = r.stats;
+    /* --- spaced repetition fields (v2.2) --------------------------------
+       Records written by older versions carry none of these; each one is
+       derived in place so no migration pass is needed.  A word last reviewed
+       less than a day ago keeps its rest, everything else counts as due. */
+    if (typeof st.ease !== 'number' || st.ease < 1) st.ease = 2.5;
+    if (typeof st.interval !== 'number' || st.interval < 1) st.interval = 0;
+    if (!st.dueAt) {
+      st.dueAt = st.lastReviewedAt ? st.lastReviewedAt + 86400000 : (r.createdAt || Date.now());
+    }
+  });
+
+  loadActivity();
 
   /* Chinese text written by the old, mis-aligned conversion table (see the
      S2T pairs above) is put back before anything is displayed */
@@ -297,7 +312,9 @@ function upsertRecord(data) {
   const rec = Object.assign({
     id: uid(), term: '', type: 'word', zh: [], en: [], phonetic: '', note: '', tags: [],
     source: 'manual', createdAt: Date.now(), updatedAt: Date.now(),
-    stats: { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0 }
+    /* dueAt: now - a word just saved has never been reviewed, so it is due */
+    stats: { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0,
+             dueAt: Date.now(), ease: 2.5, interval: 0 }
   }, data);
   state.records.unshift(rec);
   saveRecords();

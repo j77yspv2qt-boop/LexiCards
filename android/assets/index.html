@@ -329,6 +329,23 @@ body[data-revsub="records"] .fab{display:grid}
 .stat__k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
 .quiz__wronglist{margin-top:14px}
 
+/* ---------- daily goal card (v2.2) ---------- */
+.dailycard{display:flex;gap:14px;align-items:center;padding:14px;margin:0 0 10px;
+  border-radius:var(--radius);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)}
+.dailycard__ring{flex:none;width:58px;height:58px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:conic-gradient(var(--primary) 0%,var(--track,#E3ECF7) 0)}
+.dailycard__ring span{width:44px;height:44px;border-radius:50%;background:var(--surface);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--text)}
+.dailycard__info{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.dailycard__stats{display:flex;justify-content:space-between;gap:6px}
+.dailycard__stat{min-width:0}
+.dailycard__stat b{display:block;font-size:15px;font-weight:800;line-height:1.25;white-space:nowrap}
+.dailycard__stat small{display:block;font-size:10.5px;color:var(--muted);white-space:nowrap}
+.dailycard__go{width:100%}
+.dailycard__go:disabled{opacity:.6;cursor:default}
+.item__due{color:var(--danger);font-weight:700}
+
 /* ---------- bottom sheet ---------- */
 .scrim{position:fixed;inset:0;z-index:70;background:var(--scrim,rgba(11,37,69,.42));opacity:0;pointer-events:none;transition:opacity .24s var(--ease)}
 .scrim.is-open{opacity:1;pointer-events:auto}
@@ -640,6 +657,7 @@ body[data-revsub="records"] .fab{display:grid}
           <option value="az">A to Z</option>
           <option value="wrong">Most missed</option>
           <option value="seen">Most reviewed</option>
+          <option value="due">Due today</option>
         </select>
         <button type="button" class="iconbtn" id="btnData" aria-label="Data and settings">&#8943;</button>
       </div>
@@ -663,9 +681,24 @@ body[data-revsub="records"] .fab{display:grid}
       </div>
 
       <div class="quiz" id="quizPane">
+        <!-- v2.2 summary card: goal ring, streak, due count, week accuracy -->
+        <div class="dailycard" id="dailyCard" hidden>
+          <div class="dailycard__ring" id="dailyRing"><span id="dailyPct">0%</span></div>
+          <div class="dailycard__info">
+            <div class="dailycard__stats">
+              <span class="dailycard__stat"><b id="dailyCount">0 / 20</b><small>Today</small></span>
+              <span class="dailycard__stat"><b id="dailyStreak">0</b><small>Day streak</small></span>
+              <span class="dailycard__stat"><b id="dailyDue">0</b><small>Due now</small></span>
+              <span class="dailycard__stat"><b id="dailyWeek">&mdash;</b><small>7-day acc.</small></span>
+            </div>
+            <button type="button" class="btn btn--primary btn--sm dailycard__go" id="btnStartDue">Review due words</button>
+          </div>
+        </div>
         <div class="toolbar toolbar--quiz">
           <select class="select" id="quizScope" aria-label="Quiz range">
             <option value="records">My saved words</option>
+            <option value="due">Due today</option>
+            <option value="wrong">My wrong list</option>
             <option value="A1">A1 &middot; Beginner</option>
             <option value="A2">A2 &middot; Elementary</option>
             <option value="B1">B1 &middot; Intermediate</option>
@@ -836,6 +869,14 @@ body[data-revsub="records"] .fab{display:grid}
         <div class="switchrow" id="swTricky" role="switch" aria-checked="true" tabindex="0">
           <span>Tricky Quiz options (confusable words as distractors)</span><span class="switch"></span>
         </div>
+        <div class="switchrow" id="swSrs" role="switch" aria-checked="true" tabindex="0">
+          <span>Spaced repetition (quiz due words first)</span><span class="switch"></span>
+        </div>
+        <label class="field">
+          <span class="field__label">Daily goal (questions per day)</span>
+          <input type="number" class="input" id="fDailyGoal" min="5" max="200" step="5" inputmode="numeric">
+          <span class="field__hint">Shown as the ring on the Quiz page, together with your streak.</span>
+        </label>
         <div class="field">
           <span class="field__label">Storage</span>
           <span class="field__hint" id="storageInfo"></span>
@@ -959,13 +1000,16 @@ const LS_KEYS = {
   cards   : 'lexi.cards.v1',
   custom  : 'lexi.custom.v1',
   tr      : 'lexi.trcache.v1',
+  /* Per-day review counters behind the daily goal ring and the streak (v2.2).
+     One small object keyed by local date; trimmed to roughly a year. */
+  activity: 'lexi.activity.v1',
   /* Rolling safety copy of the records.  Clearing site data or a crashed
      write used to take the word list down with it, so every save also mirrors
      the records here and loadAll() can put them back. */
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '2.1.2';
+const APP_VERSION = '2.2';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */
@@ -976,6 +1020,8 @@ const DEFAULT_SETTINGS = {
   strictQuiz: false,
   quizScope: 'records',            /* what the Quiz draws questions from */
   quizTricky: true,                /* build the wrong options from confusable words */
+  srsEnabled: true,                /* quiz due words first (spaced repetition) */
+  dailyGoal: 20,                   /* questions per day shown on the Quiz ring */
   skin: 'classic'                  /* the look: colours, icons, wordmark, app icon */
 };
 
@@ -1282,6 +1328,7 @@ const state = {
   cache     : {},
   tr        : {},          // cache of machine translations, keyed by source text
   custom    : [],
+  activity  : {},          // per-day review counters: { 'YYYY-MM-DD': {reviewed, correct} }
   page      : 'discover',   // which of the four pages is on screen
   dictSub   : 'discover',
   revSub    : 'records',
@@ -1317,7 +1364,21 @@ function loadAll() {
       Store.write(LS_KEYS.records, state.records);
     }
   }
-  state.records.forEach(r => { if (!r.stats) r.stats = { seen:0, correct:0, wrong:0, streak:0, lastReviewedAt:0 }; });
+  state.records.forEach(r => {
+    if (!r.stats) r.stats = { seen:0, correct:0, wrong:0, streak:0, lastReviewedAt:0 };
+    const st = r.stats;
+    /* --- spaced repetition fields (v2.2) --------------------------------
+       Records written by older versions carry none of these; each one is
+       derived in place so no migration pass is needed.  A word last reviewed
+       less than a day ago keeps its rest, everything else counts as due. */
+    if (typeof st.ease !== 'number' || st.ease < 1) st.ease = 2.5;
+    if (typeof st.interval !== 'number' || st.interval < 1) st.interval = 0;
+    if (!st.dueAt) {
+      st.dueAt = st.lastReviewedAt ? st.lastReviewedAt + 86400000 : (r.createdAt || Date.now());
+    }
+  });
+
+  loadActivity();
 
   /* Chinese text written by the old, mis-aligned conversion table (see the
      S2T pairs above) is put back before anything is displayed */
@@ -1431,7 +1492,9 @@ function upsertRecord(data) {
   const rec = Object.assign({
     id: uid(), term: '', type: 'word', zh: [], en: [], phonetic: '', note: '', tags: [],
     source: 'manual', createdAt: Date.now(), updatedAt: Date.now(),
-    stats: { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0 }
+    /* dueAt: now - a word just saved has never been reviewed, so it is due */
+    stats: { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0,
+             dueAt: Date.now(), ease: 2.5, interval: 0 }
   }, data);
   state.records.unshift(rec);
   saveRecords();
@@ -2012,6 +2075,8 @@ function recordsPool() {
 }
 function poolSizeFor(scope) {
   if (scope === 'records') return recordsPool().length;
+  if (scope === 'due') return dueRecords().length;
+  if (scope === 'wrong') return wrongRecords().length;
   return levelPool(scope).length;
 }
 
@@ -3734,6 +3799,7 @@ function visibleRecords() {
   if (sort === 'az') list.sort((a, b) => a.term.toLowerCase() < b.term.toLowerCase() ? -1 : 1);
   else if (sort === 'wrong') list.sort((a, b) => ((b.stats && b.stats.wrong) || 0) - ((a.stats && a.stats.wrong) || 0));
   else if (sort === 'seen') list.sort((a, b) => ((b.stats && b.stats.seen) || 0) - ((a.stats && a.stats.seen) || 0));
+  else if (sort === 'due') list.sort((a, b) => ((a.stats && a.stats.dueAt) || 0) - ((b.stats && b.stats.dueAt) || 0));
   else list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   return list;
 }
@@ -3760,6 +3826,7 @@ function recordItemHTML(r) {
         '<div class="item__meta">' +
           '<span>' + (stats.seen ? stats.seen + ' reviews' : 'Not reviewed yet') + '</span>' +
           (date ? '<span>' + escapeHTML(date) + '</span>' : '') +
+          (isDueRecord(r) ? '<span class="item__due">Due today</span>' : '') +
         '</div>' +
       '</div>' +
       '<div class="item__side">' +
@@ -3968,7 +4035,8 @@ function initEntrySheet() {
    ===================================================================== */
 const SWITCHES = [
   { id: 'swHaptics', key: 'haptics' },
-  { id: 'swTricky', key: 'quizTricky' }
+  { id: 'swTricky', key: 'quizTricky' },
+  { id: 'swSrs', key: 'srsEnabled' }
 ];
 
 function syncSettingsUI() {
@@ -3989,6 +4057,8 @@ function syncSettingsUI() {
   if (bak) bak.textContent = backupInfo();
   const speed = $('#speedInfo');
   if (speed) speed.textContent = speedSummary();
+  const goal = $('#fDailyGoal');
+  if (goal && document.activeElement !== goal) goal.value = String(state.settings.dailyGoal || 20);
 }
 
 
@@ -4074,7 +4144,9 @@ function importData(e) {
             tags: Array.isArray(r.tags) ? r.tags : [],
             source: r.source || 'manual',
             createdAt: r.createdAt || Date.now(), updatedAt: Date.now(),
-            stats: (r.stats && typeof r.stats === 'object') ? r.stats : { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0 }
+            stats: (r.stats && typeof r.stats === 'object') ? r.stats
+              : { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0,
+                  dueAt: Date.now(), ease: 2.5, interval: 0 }
           });
           added++;
         }
@@ -4120,6 +4192,16 @@ function initDataSheet() {
   const fileInput = $('#fileImport');
   if (importBtn && fileInput) importBtn.addEventListener('click', () => fileInput.click());
   if (fileInput) fileInput.addEventListener('change', importData);
+
+  /* daily goal: live-clamped while typing so the ring never divides by 0 */
+  const goal = $('#fDailyGoal');
+  if (goal) goal.addEventListener('input', () => {
+    const v = parseInt(goal.value, 10);
+    if (!isFinite(v)) return;
+    state.settings.dailyGoal = clamp(v, 5, 200);
+    saveSettings();
+    renderDailyCard();
+  });
 
   const clearCache = $('#btnClearCache');
   if (clearCache) clearCache.addEventListener('click', () => {
@@ -4206,7 +4288,7 @@ const GUIDE_SECTIONS = [
   {
     h: 'Records：管理你的字',
     ul: [
-      '搜尋框可找字詞或中文意思；右邊可排序：Newest、A to Z、Most missed、Most reviewed',
+      '搜尋框可找字詞或中文意思；右邊可排序：Newest、A to Z、Most missed、Most reviewed、Due today',
       '點一筆記錄即可編輯中文釋義、英文解釋、音標、筆記與標籤',
       '右側紅色 ✕ 刪除該筆（會先請你確認）',
       '右下角 + 可手動新增一筆記錄',
@@ -4216,12 +4298,24 @@ const GUIDE_SECTIONS = [
   {
     h: 'Quiz：三選一測驗',
     ul: [
-      '上方選範圍：My saved words，或任一 CEFR 等級（會從內建詞庫出題）',
+      '上方選範圍：My saved words、Due today（今天到期）、My wrong list，或任一 CEFR 等級（會從內建詞庫出題）',
       '想讓干擾選項更難：Data & settings → Tricky Quiz options',
       '答對／答錯都有動畫與震動；答完可按 Next，或把這題 Add to Records',
       'Skip 跳過這題、Reset round 重新開始這一回合',
       '下方統計：Round、Correct、Missed、Streak、Accuracy；' +
         'Missed in this round 會列出這回合答錯的詞'
+    ]
+  },
+  {
+    h: '間隔重複與每日目標（v2.2）',
+    p: ['Quiz 會照記憶曲線安排每個詞下次複習的時間：'],
+    ul: [
+      '答對＝間隔拉長（最長約半年），答錯＝明天再來；到期的詞會優先出題',
+      'Records 的排序選項新增 Due today，列上出現紅色「Due today」就是今天該複習',
+      'Quiz 頁頂部的圓環顯示今日答題進度，旁邊是連續天數、今天到期數與近 7 天正確率',
+      '每日達到目標時會輕震一下；目標可在 Data & settings → Daily goal 調整',
+      'Quiz 範圍新增 Due today 與 My wrong list：後者收集常答錯的詞，答對數超過答錯數就自動畢業',
+      '不想要這套排程？Data & settings → Spaced repetition 關掉即可回到純隨機加權'
     ]
   },
   {
@@ -4314,12 +4408,13 @@ function initGuide() {
 const QUIZ_OPTIONS = 3;                       /* one right answer, two wrong */
 const QUIZ_HISTORY = 12;                      /* do not repeat these yet */
 
-/* What the Quiz draws from: the user's own Records, or one CEFR level of the
-   built-in deck.  Level ranges work fully offline - the bundled tables carry
-   the Chinese glosses the options are made of. */
+/* What the Quiz draws from: the user's own Records, the subset due for
+   review, the words they keep missing, or one CEFR level of the built-in
+   deck.  Level ranges work fully offline - the bundled tables carry the
+   Chinese glosses the options are made of. */
 function quizScope() {
   const s = state.settings.quizScope || 'records';
-  return (s === 'records' || CEFR_LEVELS.indexOf(s) >= 0) ? s : 'records';
+  return isQuizScope(s) ? s : 'records';
 }
 
 function recordQuizItem(r) {
@@ -4333,9 +4428,17 @@ function recordQuizItem(r) {
   };
 }
 
+/* the two scopes that are not CEFR levels */
+function isQuizScope(s) {
+  return s === 'records' || s === 'due' || s === 'wrong' || CEFR_LEVELS.indexOf(s) >= 0;
+}
+
 function quizItems() {
-  if (quizScope() === 'records') return recordsPool().map(recordQuizItem);
-  return levelPool(quizScope());
+  const s = quizScope();
+  if (s === 'records') return recordsPool().map(recordQuizItem);
+  if (s === 'due') return dueRecords().map(recordQuizItem);
+  if (s === 'wrong') return wrongRecords().map(recordQuizItem);
+  return levelPool(s);
 }
 
 /* Wrong options may come from anywhere in the same level, not only from the
@@ -4345,6 +4448,34 @@ function distractorPool(item) {
   const base = quizItems();
   if (level === quizScope()) return base;
   return base.concat(levelPool(level));
+}
+
+/* --------------------------- spaced repetition (v2.2) ----------------------
+   A saved word carries dueAt / ease / interval in stats (see applySrs).
+   dueRecords() and wrongRecords() are the two review pools the Quiz can
+   point at; both are derived from stats, never stored on their own. */
+
+function isDueRecord(r) {
+  const st = r && r.stats;
+  if (!st || !st.dueAt) return true;        /* never scheduled = needs review */
+  return st.dueAt <= Date.now();
+}
+function dueRecords() { return recordsPool().filter(isDueRecord); }
+function wrongRecords() {
+  return recordsPool().filter(r => {
+    const st = r.stats;
+    /* in the wrong list while misses still outrank hits; answering well
+       enough graduates the word automatically */
+    return st && (st.wrong || 0) > 0 && (st.correct || 0) <= (st.wrong || 0);
+  });
+}
+
+/* Narrow a candidate pool to the overdue words.  With the switch off this
+   is the identity, so the old weighting behaviour is one flag away. */
+function duePreferred(pool) {
+  if (!state.settings.srsEnabled) return pool;
+  const due = pool.filter(x => x.record && isDueRecord(x.record));
+  return due.length ? due : pool;
 }
 
 function pickWeighted(pool) {
@@ -4357,6 +4488,12 @@ function pickWeighted(pool) {
   if (pool.length > 1) candidates = pool.filter(x => (!cur || x.term !== cur.term) && !recent[normKey(x.term)]);
   if (!candidates.length) candidates = pool.filter(x => !cur || x.term !== cur.term);
   if (!candidates.length) candidates = pool;
+
+  /* spaced repetition: an overdue word beats a fresh one, but only inside
+     the pool the scope already chose - a due word still loses to "not asked
+     in the last twelve questions" */
+  const dueOnly = duePreferred(candidates);
+  if (dueOnly.length) candidates = dueOnly;
 
   const weights = candidates.map(x => {
     const st = (x.record && x.record.stats) || {};
@@ -4428,6 +4565,25 @@ function updateQuizStats() {
   setText('#stAcc', answered ? Math.round(r.correct / answered * 100) + '%' : '\u2014');
 }
 
+/* SM-2, simplified to the two grades this Quiz actually has: a right answer
+   stretches the interval by the current ease (capped at half a year), a miss
+   sends the word back to tomorrow and lowers the ease.  0-20% jitter keeps
+   a batch of words saved on the same day from coming due on the same day. */
+function applySrs(rec, ok) {
+  const st = rec.stats;
+  if (typeof st.ease !== 'number' || st.ease < 1) st.ease = 2.5;
+  if (typeof st.interval !== 'number' || st.interval < 1) st.interval = 0;
+  if (ok) {
+    st.interval = st.interval < 1 ? 1 : Math.min(180, Math.round(st.interval * st.ease));
+    if (st.ease < 2.5) st.ease = Math.min(2.5, st.ease + 0.05);
+  } else {
+    st.interval = 1;
+    st.ease = Math.max(1.3, st.ease - 0.2);
+  }
+  const jitter = Math.round(Math.random() * 0.2 * st.interval * 86400000);
+  st.dueAt = Date.now() + st.interval * 86400000 + jitter;
+}
+
 function touchStats(rec, ok) {
   if (!rec) return;
   if (!rec.stats) rec.stats = { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0 };
@@ -4440,6 +4596,7 @@ function touchStats(rec, ok) {
     rec.stats.wrong = (rec.stats.wrong || 0) + 1;
     rec.stats.streak = 0;
   }
+  applySrs(rec, ok);
   saveRecords();
 }
 
@@ -4511,13 +4668,22 @@ function renderQuestion() {
     state.round.current = null;
     const box = $('#quizOptions');
     if (box) box.innerHTML = '';
-    showQuizEmpty(true, quizScope() === 'records'
+    const scope = quizScope();
+    showQuizEmpty(true, scope === 'records'
       ? '<div class="empty__title">Not enough meanings yet</div>' +
         '<div>Save a few words with a meaning first &mdash; a question needs<br>' +
         'three different meanings to choose from.</div>'
-      : '<div class="empty__title">Nothing to ask at this level</div>' +
-        '<div>These words have no bundled meaning yet. Try another level,<br>' +
-        'or connect once so meanings can be fetched.</div>');
+      : scope === 'due'
+        ? '<div class="empty__title">Nothing to review right now</div>' +
+          '<div>You are caught up &mdash; come back tomorrow, or pick<br>' +
+          'another range above.</div>'
+        : scope === 'wrong'
+          ? '<div class="empty__title">No words are waiting</div>' +
+            '<div>Words you miss more than you get right will show<br>' +
+            'up here automatically.</div>'
+          : '<div class="empty__title">Nothing to ask at this level</div>' +
+            '<div>These words have no bundled meaning yet. Try another level,<br>' +
+            'or connect once so meanings can be fetched.</div>');
     updateQuizStats();
     updatePoolInfo();
     return;
@@ -4546,8 +4712,14 @@ function updatePoolInfo() {
   const scope = quizScope();
   const n = poolSizeFor(scope);
   info.textContent = n + (scope === 'records'
-    ? (n === 1 ? ' saved word' : ' saved words')
-    : ' ' + scope + ' words');
+    ? (n === 1
+      ? ' saved word'
+      : ' saved words')
+    : scope === 'due'
+      ? (n === 1 ? ' due word' : ' due words')
+      : scope === 'wrong'
+        ? (n === 1 ? ' word to relearn' : ' words to relearn')
+        : ' ' + scope + ' words');
 }
 
 function renderAnswerPanel(q) {
@@ -4635,6 +4807,7 @@ function answerQuiz(index) {
     renderAnswerPanel(q);
   }
   touchStats(q.record, ok);
+  recordActivity(ok);
   updateQuizStats();
   renderWrongList();
 
@@ -4687,8 +4860,12 @@ function resetRound() {
 }
 
 function setQuizScope(scope) {
-  state.settings.quizScope = (scope === 'records' || CEFR_LEVELS.indexOf(scope) >= 0) ? scope : 'records';
+  if (!isQuizScope(scope)) scope = 'records';
+  state.settings.quizScope = scope;
   saveSettings();
+  /* keep the select in step when the switch came from the summary card */
+  const select = $('#quizScope');
+  if (select && select.value !== scope) select.value = scope;
   clearRoundTimer();
   state.round = newRound();
   renderWrongList();
@@ -4703,6 +4880,7 @@ function refreshQuizState() {
   const scope = quizScope();
   const select = $('#quizScope');
   if (select && select.value !== scope) select.value = scope;
+  renderDailyCard();
   if (!poolSizeFor(scope) || !state.round.current) {
     renderQuestion();
   } else {
@@ -4731,6 +4909,9 @@ function initQuiz() {
   if (skip) skip.addEventListener('click', skipQuestion);
   const reset = $('#btnQuizReset');
   if (reset) reset.addEventListener('click', resetRound);
+  /* summary card: jump straight into the due queue */
+  const start = $('#btnStartDue');
+  if (start) start.addEventListener('click', () => setQuizScope('due'));
 
   /* desktop: 1 / 2 / 3 pick an option, Enter or Space moves on */
   document.addEventListener('keydown', e => {
@@ -4749,6 +4930,107 @@ function initQuiz() {
   });
 }
 
+
+/* =====================================================================
+   Daily activity: the counters behind the Quiz page's goal ring.
+
+   One tiny object in localStorage keyed by the *local* date, so the day
+   flips at midnight where the learner actually lives, not at UTC.  Only
+   counts are stored (two integers per day) and the table is trimmed to
+   about a year, so this stays a few kilobytes at most.
+   ===================================================================== */
+
+function dayKey(d) {
+  const x = d || new Date();
+  return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') +
+    '-' + String(x.getDate()).padStart(2, '0');
+}
+
+function loadActivity() {
+  const a = Store.read(LS_KEYS.activity, null);
+  state.activity = (a && typeof a === 'object' && !Array.isArray(a)) ? a : {};
+}
+
+function saveActivity() { Store.write(LS_KEYS.activity, state.activity); }
+
+function activityToday() {
+  return state.activity[dayKey()] || { reviewed: 0, correct: 0 };
+}
+
+/* called from answerQuiz() for every answered question, whether or not the
+   word is a saved record - the goal counts effort, not storage */
+function recordActivity(ok) {
+  const k = dayKey();
+  const before = state.activity[k] || (state.activity[k] = { reviewed: 0, correct: 0 });
+  const goal = Math.max(1, state.settings.dailyGoal || 20);
+  const wasBelow = before.reviewed < goal;
+  before.reviewed++;
+  if (ok) before.correct++;
+
+  /* keep roughly a year of days; keys sort chronologically as YYYY-MM-DD */
+  const keys = Object.keys(state.activity);
+  if (keys.length > 400) {
+    keys.sort();
+    keys.slice(0, keys.length - 365).forEach(x => { delete state.activity[x]; });
+  }
+  saveActivity();
+  /* crossing the daily goal gets the same little pulse as a save */
+  if (wasBelow && before.reviewed >= goal) vibrate(HAPTIC.saved);
+  renderDailyCard();
+}
+
+/* consecutive local days with at least one review; today still empty means
+   yesterday's work keeps the streak alive until the day actually ends */
+function activityStreak() {
+  let n = 0;
+  const d = new Date();
+  if (!activityToday().reviewed) d.setDate(d.getDate() - 1);
+  for (;;) {
+    const t = state.activity[dayKey(d)];
+    if (!t || !t.reviewed) break;
+    n++;
+    d.setDate(d.getDate() - 1);
+  }
+  return n;
+}
+
+/* correct / reviewed over the last seven days, null when nothing was reviewed */
+function weekAccuracy() {
+  let ok = 0, all = 0;
+  const d = new Date();
+  for (let i = 0; i < 7; i++) {
+    const t = state.activity[dayKey(d)];
+    if (t) { all += t.reviewed || 0; ok += t.correct || 0; }
+    d.setDate(d.getDate() - 1);
+  }
+  return all ? Math.round((ok / all) * 100) : null;
+}
+
+/* the card at the top of the Quiz page: goal ring, streak, due count,
+   week accuracy and the "start reviewing" button */
+function renderDailyCard() {
+  const card = $('#dailyCard');
+  if (!card) return;
+  card.hidden = !state.records.length;
+  const goal = Math.max(1, state.settings.dailyGoal || 20);
+  const t = activityToday();
+  const pct = clamp(Math.round((t.reviewed / goal) * 100), 0, 100);
+  const ring = $('#dailyRing');
+  if (ring) ring.style.background =
+    'conic-gradient(var(--primary) ' + pct + '%, var(--track, #E3ECF7) 0%)';
+  setText('#dailyPct', pct + '%');
+  setText('#dailyCount', t.reviewed + ' / ' + goal);
+  setText('#dailyStreak', String(activityStreak()));
+  setText('#dailyDue', String(dueRecords().length));
+  const wk = weekAccuracy();
+  setText('#dailyWeek', wk === null ? '\u2014' : wk + '%');
+  const go = $('#btnStartDue');
+  if (go) {
+    const due = dueRecords().length;
+    go.disabled = due === 0;
+    go.textContent = due ? 'Review due words (' + due + ')' : 'All caught up \u2713';
+  }
+}
 
 /* generated by build/skins/gothic/make.py - edit the source art, not this */
 const SKIN_GOTHIC = {
@@ -5990,6 +6272,7 @@ function init() {
   rebuildDeck();
   refreshRecords();
   updateQuizStats();
+  renderDailyCard();
 
   if (!storageOK) {
     showToast('This browser blocks local storage - records will not persist.', 'warn', 4200);

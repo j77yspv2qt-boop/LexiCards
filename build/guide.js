@@ -50,7 +50,7 @@ const GUIDE_SECTIONS = [
   {
     h: 'Records：管理你的字',
     ul: [
-      '搜尋框可找字詞或中文意思；右邊可排序：Newest、A to Z、Most missed、Most reviewed',
+      '搜尋框可找字詞或中文意思；右邊可排序：Newest、A to Z、Most missed、Most reviewed、Due today',
       '點一筆記錄即可編輯中文釋義、英文解釋、音標、筆記與標籤',
       '右側紅色 ✕ 刪除該筆（會先請你確認）',
       '右下角 + 可手動新增一筆記錄',
@@ -60,12 +60,24 @@ const GUIDE_SECTIONS = [
   {
     h: 'Quiz：三選一測驗',
     ul: [
-      '上方選範圍：My saved words，或任一 CEFR 等級（會從內建詞庫出題）',
+      '上方選範圍：My saved words、Due today（今天到期）、My wrong list，或任一 CEFR 等級（會從內建詞庫出題）',
       '想讓干擾選項更難：Data & settings → Tricky Quiz options',
       '答對／答錯都有動畫與震動；答完可按 Next，或把這題 Add to Records',
       'Skip 跳過這題、Reset round 重新開始這一回合',
       '下方統計：Round、Correct、Missed、Streak、Accuracy；' +
         'Missed in this round 會列出這回合答錯的詞'
+    ]
+  },
+  {
+    h: '間隔重複與每日目標（v2.2）',
+    p: ['Quiz 會照記憶曲線安排每個詞下次複習的時間：'],
+    ul: [
+      '答對＝間隔拉長（最長約半年），答錯＝明天再來；到期的詞會優先出題',
+      'Records 的排序選項新增 Due today，列上出現紅色「Due today」就是今天該複習',
+      'Quiz 頁頂部的圓環顯示今日答題進度，旁邊是連續天數、今天到期數與近 7 天正確率',
+      '每日達到目標時會輕震一下；目標可在 Data & settings → Daily goal 調整',
+      'Quiz 範圍新增 Due today 與 My wrong list：後者收集常答錯的詞，答對數超過答錯數就自動畢業',
+      '不想要這套排程？Data & settings → Spaced repetition 關掉即可回到純隨機加權'
     ]
   },
   {

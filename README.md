@@ -5,7 +5,7 @@
 內建 Oxford 3000/5000 完整詞庫的中文釋義、音標與例句，**沒有網路也能學**；測驗以 CEFR 程度出題，答題有干擾項、動畫與震動回饋；所有記錄只存在你自己的裝置，並且有滾動備份。
 
 - 網頁版：`index.html`（零依賴、零建置，雙擊即用）
-- Android 版：Releases 頁的 `LexiCards.apk`（v2.1.2，約 3.0 MB）
+- Android 版：Releases 頁的 `LexiCards.apk`（v2.2，約 3.0 MB）
 
 ---
 
@@ -102,8 +102,8 @@ App 共**四個頁面**，由左至右依序為 **Discover → My Cards → Reco
 ### 2.4 Revision → Records（記錄）
 
 - **搜尋**：可比對詞彙、中文釋義、英文解釋、標籤、筆記
-- **排序**：`Newest` / `A to Z` / `Most missed` / `Most reviewed`
-- **每列顯示**：詞、類型、CEFR 等級、中文釋義（可多義項）、英文解釋、複習次數、日期、正確 / 錯誤次數
+- **排序**：`Newest` / `A to Z` / `Most missed` / `Most reviewed` / `Due today`（到期日由近到遠）
+- **每列顯示**：詞、類型、CEFR 等級、中文釋義（可多義項）、英文解釋、複習次數、日期、正確 / 錯誤次數；**今天該複習的詞帶紅色 `Due today` 標記**
 - **點一列** → 編輯面板：詞、類型、中文釋義（多義項以 `/` 分隔）、英文解釋、音標、筆記、標籤；`Fetch meaning` 可自動抓取預填
 - **紅色 ✕** 刪除（附確認框；滾動備份仍保留，可事後還原）
 - **右下 `+`**：手動新增詞語 / 片語 / 句式
@@ -111,7 +111,13 @@ App 共**四個頁面**，由左至右依序為 **Discover → My Cards → Reco
 
 ### 2.5 Revision → Quiz（三選一測驗）
 
-**範圍選擇**：`My saved words`（你的記錄）／`A1` / `A2` / `B1` / `B2–C1`，右側即時顯示該範圍的詞數。
+**範圍選擇**：`My saved words`（你的記錄）／`Due today`（今天到期）／`My wrong list`（常答錯的詞）／`A1` / `A2` / `B1` / `B2–C1`，右側即時顯示該範圍的詞數。
+
+**開場摘要卡**（v2.2）：Quiz 頁頂部顯示今日答題進度環（目標可在 Data & settings 的 `Daily goal` 調整）、連續天數（streak）、今天到期數與近 7 天正確率；`Review due words` 按鈕一鍵切到 Due today 範圍開跑，全部複習完會顯示「All caught up ✓」。
+
+**間隔重複排程（v2.2）**：每筆記錄帶 `dueAt` / `ease` / `interval` 三欄（SM-2 輕量版）——答對把間隔乘上 ease（上限 180 天），答錯拉回隔天並調降 ease；到期日加 0–20% 抖動，避免同批存的詞擠在同一天到期。在 `My saved words` 範圍出題時**到期詞優先**（Data & settings 的 `Spaced repetition` 可關掉，關掉即回到純隨機加權）。舊版本的記錄不需遷移，啟動時依 `lastReviewedAt` 現場補齊欄位。
+
+**錯題本**：常答錯的詞自動進入 `My wrong list`（判定：錯誤次數 ≥ 1 且正確次數 ≤ 錯誤次數），答對數超過錯誤次數就自動畢業——不另存一份資料，全部由 `stats` 演生。
 
 **出題方式**：一題一個詞，三個中文選項——1 個正解 ＋ 2 個**易混淆干擾項**。干擾項是刻意挑的：
 
@@ -133,7 +139,7 @@ App 共**四個頁面**，由左至右依序為 **Discover → My Cards → Reco
 
 **統計**：Round（題數）、Correct、Missed、Streak（連對）、Accuracy；下方列出「本回合答錯」清單。
 
-**出題偏好**：錯得多、久沒複習的詞權重較高；短期內不會重複出同一個詞（記住最近 12 題）。
+**出題偏好**：錯得多、久沒複習的詞權重較高（SRS 開啟時到期詞優先）；短期內不會重複出同一個詞（記住最近 12 題）。
 
 **桌機快捷鍵**：`1` `2` `3` 選項、`Enter` 或 `空白鍵` 下一題。
 
@@ -143,6 +149,8 @@ App 共**四個頁面**，由左至右依序為 **Discover → My Cards → Reco
 |---|---|
 | `Vibration feedback` | 答對 / 答錯 / 收藏時的震動開關 |
 | `Tricky Quiz options` | 是否使用易混淆詞作為干擾項 |
+| `Spaced repetition` | 出題時到期詞是否優先（v2.2；關掉即回到純隨機加權，排程本身仍會記錄） |
+| `Daily goal` | 每日答題目標（預設 20，可 5–200），驅動 Quiz 頁的進度環 |
 | `Storage` | 記錄數、已快取的詞義與翻譯數、占用大小、是否可持久保存 |
 | `Records backup` | 最近一次滾動備份的時間與筆數 |
 | `Export JSON` | 匯出全部資料備份 |
@@ -202,9 +210,9 @@ Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmark
 
 ### 2.9 User guide（使用說明）
 
-**App info → User guide → Open the guide** 會彈出完整說明書，涵蓋九個主題：
+**App info → User guide → Open the guide** 會彈出完整說明書，涵蓋十個主題：
 四個頁面、Discover 的看卡與發音、存檔手勢、Records 管理、Quiz、
-外觀、資料與備份、更新、以及幾個小提示。
+間隔重複與每日目標、外觀、資料與備份、更新、以及幾個小提示。
 
 說明書自己有語言切換（**繁體中文 / 简体中文**），跟「Definition in Chinese」是**兩個獨立設定**：
 你可以讓卡片用繁體、說明書看簡體。內文寫在 `build/guide.js`，只寫一份繁體，
@@ -305,7 +313,7 @@ Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmark
 
 ## 5. Android APK
 
-- **版本**：2.1.2（versionCode 12，minSdk 24 / targetSdk 35），約 3.0 MB，零額外依賴
+- **版本**：2.2（versionCode 13，minSdk 24 / targetSdk 35），約 3.0 MB，零額外依賴
 - **權限**：僅 `INTERNET`、`ACCESS_NETWORK_STATE`、`VIBRATE`
 - **安裝**：從 Releases 下載 APK → 允許安裝未知來源 → 完成
 - **升級**：直接安裝新版本即可覆蓋，記錄保留（見第 4 節）
@@ -369,7 +377,7 @@ Release 的資產檔名固定為 `LexiCards.apk`，App 的更新檢查就是抓�
 ```bash
 cd build
 python3 build.py      # 合併零件 → ../index.html，並檢查 JS 語法、HTML id 對照、重複宣告
-python3 smoke.py      # headless Chromium 跑 238 項功能測試（手勢、拖放、Quiz、API fallback、外觀），輸出截圖
+python3 smoke.py      # headless Chromium 跑 283 項功能測試（手勢、拖放、Quiz、SRS、API fallback、外觀），輸出截圖
 python3 shots.py      # 產生 Records / Quiz 畫面截圖（/tmp/shot-*.png）
 python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始資料，見 6.3）
 ```
@@ -398,9 +406,10 @@ python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始�
 | `build/guide.js` | 使用說明（繁中撰寫，即時轉簡中）與它的語言切換 |
 | `build/update.js` | App 內更新檢查（GitHub Release ＋ `version.json` 備援） |
 | `build/nav.js`、`build/init.js` | 頁籤導覽與啟動流程 |
+| `build/activity.js` | 每日活動計數（v2.2）：目標環、連續天數、近 7 天正確率 |
 | `build/skin.js`、`build/skin_gothic.js`、`build/skin_primevere.js` | 外觀系統：`SKINS` 設定表、套用 / 清除、選擇器；各款的圖像（base64） |
 | `build/skins/gothic/`、`build/skins/primevere/` | 各款素材：原圖 / `out/` 成品、`make.py` 生成腳本（同時產出 Android 資源） |
-| `build/smoke*.py`／`build/smoke_*.js` | 238 項功能測試 |
+| `build/smoke*.py`／`build/smoke_*.js` | 283 項功能測試 |
 | `build/shots.py` | 畫面截圖腳本 |
 | `build/make_data.py` | 內建詞彙表的資料管線 |
 | `version.json` | 目前版本與 APK 下載網址（更新檢查的備援來源） |
@@ -431,11 +440,10 @@ python3 build/make_data.py                # 約 2–3 分鐘
 1. 片語 / 句式沒有英文定義（免費字典 API 不支援多字詞），只會有中文釋義與例句。
 2. 機翻（MyMemory / Google）品質不穩，專業用法建議自行修正；修正後不會被覆蓋。
 3. 記錄存在瀏覽器，清除網站資料會一併清掉（但有滾動備份可還原），仍建議定期 `Export JSON`。
-4. Quiz 沒有間隔重複演算法，只有「錯得多 / 久沒複習」加權。
-5. 範圍測驗至少要有三個不同釋義才能出題，否則該範圍會顯示提示。
-6. 內建例句取自 Tatoeba 語料，自然但非教材句；少數罕見詞以手寫例句補足。
-7. CEFR 分級以 Oxford／字表為準，與其他機構的分級可能略有出入。
-8. 更新檢查需要連得到 GitHub；離線時 App info 會顯示無法連線，可改按 `Releases page` 手動確認。
+4. 範圍測驗至少要有三個不同釋義才能出題，否則該範圍會顯示提示。
+5. 內建例句取自 Tatoeba 語料，自然但非教材句；少數罕見詞以手寫例句補足。
+6. CEFR 分級以 Oxford／字表為準，與其他機構的分級可能略有出入。
+7. 更新檢查需要連得到 GitHub；離線時 App info 會顯示無法連線，可改按 `Releases page` 手動確認。
 
 ---
 
@@ -499,6 +507,24 @@ https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v1.7/LexiCards.apk
 ---
 
 ## 9. 修訂紀錄
+
+### v2.2
+
+| # | 做了什麼 | 原因 |
+|---|---|---|
+| 1 | **間隔重複排程（SRS）**：每筆記錄的 `stats` 增加 `dueAt` / `ease` / `interval` 三欄，答對把間隔乘上 ease（1 天起、上限 180 天、0–20% 抖動），答錯拉回隔天並把 ease 調降 0.2（下限 1.3）。Quiz 在 `My saved words` 範圍出題時**到期詞優先**（`duePreferred()` 兩段式：先縮到到期池，池空才退回原本的加權），Data & settings 加 `Spaced repetition` 開關可關掉。舊記錄**不需遷移**：`loadAll()` 現場補齊欄位，`lastReviewedAt` 超過一天的詞立即視為到期 | README §7 自己列的已知限制第 4 點：「Quiz 沒有間隔重複演算法，只有錯得多／久沒複習加權」 |
+| 2 | **Quiz 開場摘要卡與每日目標**：新零件 `activity.js` 以 `lexi.activity.v1` 按「當地日期」記每日答題數與正確數（只存兩個整數、保留約一年），Quiz 頁頂部顯示目標進度環、連續天數、今天到期數、近 7 天正確率與 `Review due words` 一鍵開跑按鈕；達成每日目標輕震一下（沿用 `HAPTIC.saved`）。目標預設 20、可在 `Daily goal` 調整（5–200） | Streak 原本只活在單一回合裡，關掉 App 就歸零；跨日動機與「今天該學多少」在原本的畫面上完全不存在 |
+| 3 | **`Due today` 與 `My wrong list` 兩個新範圍 + Records 的到期標記**：`poolSizeFor()` / `quizItems()` / `setQuizScope()` 認得兩個新範圍，空範圍各有專屬提示語；錯題本完全由 `stats` 演生（錯誤 ≥ 1 且正確 ≤ 錯誤即入簿、答對數超過就畢業），不存第二份資料。Records 排序加 `Due today`（到期日由近到遠），到期的列帶紅色 `Due today` 標記 | 答錯的詞原本只活在回合內的 `wrongList`，回合一重設就消失；到期資料也沒有任何可見的入口 |
+| 4 | **使用說明與 README 同步**：說明書新增「間隔重複與每日目標」一節（九個主題變十個），Records / Quiz 兩節的排序與範圍條目同步；README §2.4–2.6、§5、§6、§7 全部更新，已知限制第 4 點（無 SRS）刪除 | 文件與功能不同步就是謊言；限制補掉了就該從清單消失 |
+
+> 測試：headless Chromium 功能測試由 **238 項增加到 283 項**。新增的 45 項釘住：
+> SRS 排程的四種轉移（首答對間隔 1 天、再答對拉長、答錯重置且 ease 下降、到期落在兩天內）、
+> 舊記錄載入時補齊 `dueAt`/`ease`/`interval` 且五天前複習過的詞立即到期、
+> `dueRecords()` / `wrongRecords()` 的入簿與畢業判定、兩個新範圍的出題與 pool 數字、
+> `duePreferred()` 在開關開／關兩種狀態下的縮池行為（決定性測試，不做機率賭博）、
+> 每日計數、跨日 streak（今日空白不斷昨天的連續）、目標欄位讀寫、SRS 開關、
+> Records 的 `Due today` 排序與紅色標記（含 30 天後到期的詞**不**被標記）、
+> 摘要卡按鈕切範圍，以及「答題餵進度環」的端到端路徑。
 
 ### v2.1.2
 

@@ -23,6 +23,7 @@ function visibleRecords() {
   if (sort === 'az') list.sort((a, b) => a.term.toLowerCase() < b.term.toLowerCase() ? -1 : 1);
   else if (sort === 'wrong') list.sort((a, b) => ((b.stats && b.stats.wrong) || 0) - ((a.stats && a.stats.wrong) || 0));
   else if (sort === 'seen') list.sort((a, b) => ((b.stats && b.stats.seen) || 0) - ((a.stats && a.stats.seen) || 0));
+  else if (sort === 'due') list.sort((a, b) => ((a.stats && a.stats.dueAt) || 0) - ((b.stats && b.stats.dueAt) || 0));
   else list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
   return list;
 }
@@ -49,6 +50,7 @@ function recordItemHTML(r) {
         '<div class="item__meta">' +
           '<span>' + (stats.seen ? stats.seen + ' reviews' : 'Not reviewed yet') + '</span>' +
           (date ? '<span>' + escapeHTML(date) + '</span>' : '') +
+          (isDueRecord(r) ? '<span class="item__due">Due today</span>' : '') +
         '</div>' +
       '</div>' +
       '<div class="item__side">' +

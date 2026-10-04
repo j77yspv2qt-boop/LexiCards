@@ -9,7 +9,8 @@ function finish() {
   R.errors = (window.__errs || []).slice(0, 10);
   if (R.errors.length) R.ok = false;
   try {
-    ['lexi.records.v1', 'lexi.records.bak.v1', 'lexi.cache.v1', 'lexi.settings.v1', 'lexi.custom.v1', 'lexi.cards.v1']
+    ['lexi.records.v1', 'lexi.records.bak.v1', 'lexi.cache.v1', 'lexi.settings.v1', 'lexi.custom.v1', 'lexi.cards.v1',
+      'lexi.activity.v1']
 
       .forEach(function (k) { localStorage.removeItem(k); });
   } catch (e) { /* ignore */ }

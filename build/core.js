@@ -10,13 +10,16 @@ const LS_KEYS = {
   cards   : 'lexi.cards.v1',
   custom  : 'lexi.custom.v1',
   tr      : 'lexi.trcache.v1',
+  /* Per-day review counters behind the daily goal ring and the streak (v2.2).
+     One small object keyed by local date; trimmed to roughly a year. */
+  activity: 'lexi.activity.v1',
   /* Rolling safety copy of the records.  Clearing site data or a crashed
      write used to take the word list down with it, so every save also mirrors
      the records here and loadAll() can put them back. */
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '2.1.2';
+const APP_VERSION = '2.2';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */
@@ -27,6 +30,8 @@ const DEFAULT_SETTINGS = {
   strictQuiz: false,
   quizScope: 'records',            /* what the Quiz draws questions from */
   quizTricky: true,                /* build the wrong options from confusable words */
+  srsEnabled: true,                /* quiz due words first (spaced repetition) */
+  dailyGoal: 20,                   /* questions per day shown on the Quiz ring */
   skin: 'classic'                  /* the look: colours, icons, wordmark, app icon */
 };
 

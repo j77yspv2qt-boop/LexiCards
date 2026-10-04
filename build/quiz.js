@@ -5,12 +5,13 @@
 const QUIZ_OPTIONS = 3;                       /* one right answer, two wrong */
 const QUIZ_HISTORY = 12;                      /* do not repeat these yet */
 
-/* What the Quiz draws from: the user's own Records, or one CEFR level of the
-   built-in deck.  Level ranges work fully offline - the bundled tables carry
-   the Chinese glosses the options are made of. */
+/* What the Quiz draws from: the user's own Records, the subset due for
+   review, the words they keep missing, or one CEFR level of the built-in
+   deck.  Level ranges work fully offline - the bundled tables carry the
+   Chinese glosses the options are made of. */
 function quizScope() {
   const s = state.settings.quizScope || 'records';
-  return (s === 'records' || CEFR_LEVELS.indexOf(s) >= 0) ? s : 'records';
+  return isQuizScope(s) ? s : 'records';
 }
 
 function recordQuizItem(r) {
@@ -24,9 +25,17 @@ function recordQuizItem(r) {
   };
 }
 
+/* the two scopes that are not CEFR levels */
+function isQuizScope(s) {
+  return s === 'records' || s === 'due' || s === 'wrong' || CEFR_LEVELS.indexOf(s) >= 0;
+}
+
 function quizItems() {
-  if (quizScope() === 'records') return recordsPool().map(recordQuizItem);
-  return levelPool(quizScope());
+  const s = quizScope();
+  if (s === 'records') return recordsPool().map(recordQuizItem);
+  if (s === 'due') return dueRecords().map(recordQuizItem);
+  if (s === 'wrong') return wrongRecords().map(recordQuizItem);
+  return levelPool(s);
 }
 
 /* Wrong options may come from anywhere in the same level, not only from the
@@ -36,6 +45,34 @@ function distractorPool(item) {
   const base = quizItems();
   if (level === quizScope()) return base;
   return base.concat(levelPool(level));
+}
+
+/* --------------------------- spaced repetition (v2.2) ----------------------
+   A saved word carries dueAt / ease / interval in stats (see applySrs).
+   dueRecords() and wrongRecords() are the two review pools the Quiz can
+   point at; both are derived from stats, never stored on their own. */
+
+function isDueRecord(r) {
+  const st = r && r.stats;
+  if (!st || !st.dueAt) return true;        /* never scheduled = needs review */
+  return st.dueAt <= Date.now();
+}
+function dueRecords() { return recordsPool().filter(isDueRecord); }
+function wrongRecords() {
+  return recordsPool().filter(r => {
+    const st = r.stats;
+    /* in the wrong list while misses still outrank hits; answering well
+       enough graduates the word automatically */
+    return st && (st.wrong || 0) > 0 && (st.correct || 0) <= (st.wrong || 0);
+  });
+}
+
+/* Narrow a candidate pool to the overdue words.  With the switch off this
+   is the identity, so the old weighting behaviour is one flag away. */
+function duePreferred(pool) {
+  if (!state.settings.srsEnabled) return pool;
+  const due = pool.filter(x => x.record && isDueRecord(x.record));
+  return due.length ? due : pool;
 }
 
 function pickWeighted(pool) {
@@ -48,6 +85,12 @@ function pickWeighted(pool) {
   if (pool.length > 1) candidates = pool.filter(x => (!cur || x.term !== cur.term) && !recent[normKey(x.term)]);
   if (!candidates.length) candidates = pool.filter(x => !cur || x.term !== cur.term);
   if (!candidates.length) candidates = pool;
+
+  /* spaced repetition: an overdue word beats a fresh one, but only inside
+     the pool the scope already chose - a due word still loses to "not asked
+     in the last twelve questions" */
+  const dueOnly = duePreferred(candidates);
+  if (dueOnly.length) candidates = dueOnly;
 
   const weights = candidates.map(x => {
     const st = (x.record && x.record.stats) || {};
@@ -119,6 +162,25 @@ function updateQuizStats() {
   setText('#stAcc', answered ? Math.round(r.correct / answered * 100) + '%' : '\u2014');
 }
 
+/* SM-2, simplified to the two grades this Quiz actually has: a right answer
+   stretches the interval by the current ease (capped at half a year), a miss
+   sends the word back to tomorrow and lowers the ease.  0-20% jitter keeps
+   a batch of words saved on the same day from coming due on the same day. */
+function applySrs(rec, ok) {
+  const st = rec.stats;
+  if (typeof st.ease !== 'number' || st.ease < 1) st.ease = 2.5;
+  if (typeof st.interval !== 'number' || st.interval < 1) st.interval = 0;
+  if (ok) {
+    st.interval = st.interval < 1 ? 1 : Math.min(180, Math.round(st.interval * st.ease));
+    if (st.ease < 2.5) st.ease = Math.min(2.5, st.ease + 0.05);
+  } else {
+    st.interval = 1;
+    st.ease = Math.max(1.3, st.ease - 0.2);
+  }
+  const jitter = Math.round(Math.random() * 0.2 * st.interval * 86400000);
+  st.dueAt = Date.now() + st.interval * 86400000 + jitter;
+}
+
 function touchStats(rec, ok) {
   if (!rec) return;
   if (!rec.stats) rec.stats = { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0 };
@@ -131,5 +193,6 @@ function touchStats(rec, ok) {
     rec.stats.wrong = (rec.stats.wrong || 0) + 1;
     rec.stats.streak = 0;
   }
+  applySrs(rec, ok);
   saveRecords();
 }

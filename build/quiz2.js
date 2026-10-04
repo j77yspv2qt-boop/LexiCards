@@ -66,13 +66,22 @@ function renderQuestion() {
     state.round.current = null;
     const box = $('#quizOptions');
     if (box) box.innerHTML = '';
-    showQuizEmpty(true, quizScope() === 'records'
+    const scope = quizScope();
+    showQuizEmpty(true, scope === 'records'
       ? '<div class="empty__title">Not enough meanings yet</div>' +
         '<div>Save a few words with a meaning first &mdash; a question needs<br>' +
         'three different meanings to choose from.</div>'
-      : '<div class="empty__title">Nothing to ask at this level</div>' +
-        '<div>These words have no bundled meaning yet. Try another level,<br>' +
-        'or connect once so meanings can be fetched.</div>');
+      : scope === 'due'
+        ? '<div class="empty__title">Nothing to review right now</div>' +
+          '<div>You are caught up &mdash; come back tomorrow, or pick<br>' +
+          'another range above.</div>'
+        : scope === 'wrong'
+          ? '<div class="empty__title">No words are waiting</div>' +
+            '<div>Words you miss more than you get right will show<br>' +
+            'up here automatically.</div>'
+          : '<div class="empty__title">Nothing to ask at this level</div>' +
+            '<div>These words have no bundled meaning yet. Try another level,<br>' +
+            'or connect once so meanings can be fetched.</div>');
     updateQuizStats();
     updatePoolInfo();
     return;
@@ -101,8 +110,14 @@ function updatePoolInfo() {
   const scope = quizScope();
   const n = poolSizeFor(scope);
   info.textContent = n + (scope === 'records'
-    ? (n === 1 ? ' saved word' : ' saved words')
-    : ' ' + scope + ' words');
+    ? (n === 1
+      ? ' saved word'
+      : ' saved words')
+    : scope === 'due'
+      ? (n === 1 ? ' due word' : ' due words')
+      : scope === 'wrong'
+        ? (n === 1 ? ' word to relearn' : ' words to relearn')
+        : ' ' + scope + ' words');
 }
 
 function renderAnswerPanel(q) {
@@ -190,6 +205,7 @@ function answerQuiz(index) {
     renderAnswerPanel(q);
   }
   touchStats(q.record, ok);
+  recordActivity(ok);
   updateQuizStats();
   renderWrongList();
 
@@ -242,8 +258,12 @@ function resetRound() {
 }
 
 function setQuizScope(scope) {
-  state.settings.quizScope = (scope === 'records' || CEFR_LEVELS.indexOf(scope) >= 0) ? scope : 'records';
+  if (!isQuizScope(scope)) scope = 'records';
+  state.settings.quizScope = scope;
   saveSettings();
+  /* keep the select in step when the switch came from the summary card */
+  const select = $('#quizScope');
+  if (select && select.value !== scope) select.value = scope;
   clearRoundTimer();
   state.round = newRound();
   renderWrongList();
@@ -258,6 +278,7 @@ function refreshQuizState() {
   const scope = quizScope();
   const select = $('#quizScope');
   if (select && select.value !== scope) select.value = scope;
+  renderDailyCard();
   if (!poolSizeFor(scope) || !state.round.current) {
     renderQuestion();
   } else {
@@ -286,6 +307,9 @@ function initQuiz() {
   if (skip) skip.addEventListener('click', skipQuestion);
   const reset = $('#btnQuizReset');
   if (reset) reset.addEventListener('click', resetRound);
+  /* summary card: jump straight into the due queue */
+  const start = $('#btnStartDue');
+  if (start) start.addEventListener('click', () => setQuizScope('due'));
 
   /* desktop: 1 / 2 / 3 pick an option, Enter or Space moves on */
   document.addEventListener('keydown', e => {

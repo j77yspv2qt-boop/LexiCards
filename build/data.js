@@ -3,7 +3,8 @@
    ===================================================================== */
 const SWITCHES = [
   { id: 'swHaptics', key: 'haptics' },
-  { id: 'swTricky', key: 'quizTricky' }
+  { id: 'swTricky', key: 'quizTricky' },
+  { id: 'swSrs', key: 'srsEnabled' }
 ];
 
 function syncSettingsUI() {
@@ -24,6 +25,8 @@ function syncSettingsUI() {
   if (bak) bak.textContent = backupInfo();
   const speed = $('#speedInfo');
   if (speed) speed.textContent = speedSummary();
+  const goal = $('#fDailyGoal');
+  if (goal && document.activeElement !== goal) goal.value = String(state.settings.dailyGoal || 20);
 }
 
 
@@ -109,7 +112,9 @@ function importData(e) {
             tags: Array.isArray(r.tags) ? r.tags : [],
             source: r.source || 'manual',
             createdAt: r.createdAt || Date.now(), updatedAt: Date.now(),
-            stats: (r.stats && typeof r.stats === 'object') ? r.stats : { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0 }
+            stats: (r.stats && typeof r.stats === 'object') ? r.stats
+              : { seen: 0, correct: 0, wrong: 0, streak: 0, lastReviewedAt: 0,
+                  dueAt: Date.now(), ease: 2.5, interval: 0 }
           });
           added++;
         }
@@ -155,6 +160,16 @@ function initDataSheet() {
   const fileInput = $('#fileImport');
   if (importBtn && fileInput) importBtn.addEventListener('click', () => fileInput.click());
   if (fileInput) fileInput.addEventListener('change', importData);
+
+  /* daily goal: live-clamped while typing so the ring never divides by 0 */
+  const goal = $('#fDailyGoal');
+  if (goal) goal.addEventListener('input', () => {
+    const v = parseInt(goal.value, 10);
+    if (!isFinite(v)) return;
+    state.settings.dailyGoal = clamp(v, 5, 200);
+    saveSettings();
+    renderDailyCard();
+  });
 
   const clearCache = $('#btnClearCache');
   if (clearCache) clearCache.addEventListener('click', () => {
