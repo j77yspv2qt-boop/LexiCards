@@ -5,7 +5,7 @@
 內建 Oxford 3000/5000 完整詞庫的中文釋義、音標與例句，**沒有網路也能學**；測驗以 CEFR 程度出題，答題有干擾項、動畫與震動回饋；所有記錄只存在你自己的裝置，並且有滾動備份。
 
 - 網頁版：`index.html`（零依賴、零建置，雙擊即用）
-- Android 版：Releases 頁的 `LexiCards.apk`（v2.4，約 3.0 MB）
+- Android 版：Releases 頁的 `LexiCards.apk`（v2.5，約 3.0 MB）
 
 ---
 
@@ -30,7 +30,7 @@ python3 -m http.server 8000
 
 1. 到 [Releases](https://github.com/j77yspv2qt-boop/LexiCards/releases) 下載 `LexiCards.apk`。
 2. 首次安裝時系統會要求允許「安裝未知來源的應用程式」，同意即可。
-3. 需求：Android 7.0（API 24）以上；不需要網路權限以外的任何權限。
+3. 需求：Android 7.0（API 24）以上；**安裝時不請求任何權限對話框**（只有主動打開「每日提醒」時，Android 13+ 才會問一次通知權限）。
 
 ---
 
@@ -176,6 +176,7 @@ Records 工具列的 📊 開啟一個全螢幕面板，內容全部由既有資
 | `Vibration feedback` | 答對 / 答錯 / 收藏時的震動開關 |
 | `Tricky Quiz options` | 是否使用易混淆詞作為干擾項 |
 | `Spaced repetition` | 出題時到期詞是否優先（v2.2；關掉即回到純隨機加權，排程本身仍會記錄） |
+| `Daily reminder`（v2.5） | **每天 20:00 一則本地通知**（僅 Android 版出現這個開關；網頁版整個開關會隱藏，因為分頁沒辦法在 20:00 自己醒來）。打開後當天就排程，通知會寫出今天還有幾個詞到期；**一進 App 當天的通知就取消**，明天的仍在。Android 13+ 第一次打開時才請求通知權限，拒絕會把開關切回去 |
 | `Daily goal` | 每日答題目標（預設 20，可 5–200），驅動 Quiz 頁的進度環 |
 | `Storage` | 記錄數、已快取的詞義與翻譯數、占用大小、是否可持久保存 |
 | `Records backup` | 最近一次滾動備份的時間與筆數 |
@@ -195,7 +196,7 @@ Records 工具列的 📊 開啟一個全螢幕面板，內容全部由既有資
 - **Definition in Chinese**：繁體 / 簡體切換，卡片、Quiz 選項與例句譯文都會即時跟著切換
 - **App skin**：外觀選擇器（見第 2.8 節）
 - **User guide**：使用說明按鈕，開啟後可切換**繁體中文 / 简体中文**（見第 2.9 節）
-- **Updates**：見第 5.2 節「App 內更新檢查」
+- **Updates**：見第 5.3 節「App 內更新檢查」
 
 ### 2.8 App skin（外觀）
 
@@ -343,8 +344,8 @@ Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmark
 
 ## 5. Android APK
 
-- **版本**：2.4（versionCode 15，minSdk 24 / targetSdk 35），約 3.0 MB，零額外依賴
-- **權限**：僅 `INTERNET`、`ACCESS_NETWORK_STATE`、`VIBRATE`
+- **版本**：2.5（versionCode 16，minSdk 24 / targetSdk 35），約 3.0 MB，零額外依賴
+- **權限**：`INTERNET`、`ACCESS_NETWORK_STATE`、`VIBRATE`（照舊）；另有 `RECEIVE_BOOT_COMPLETED`（一般權限，安裝即授予、不彈框，重開機後重新排程用）、`SCHEDULE_EXACT_ALARM`（特殊權限）、`POST_NOTIFICATIONS`（**危險權限，只有打開每日提醒時才請求**）
 - **安裝**：從 Releases 下載 APK → 允許安裝未知來源 → 完成
 - **升級**：直接安裝新版本即可覆蓋，記錄保留（見第 4 節）
 - **重新打包**：
@@ -356,7 +357,28 @@ python3 build_apk.py
 
 腳本會自動把最新的 `index.html` 同步進 `assets/`、編譯資源與 dex、對齊並重新簽署成根目錄的 `LexiCards.apk`（簽章金鑰 `android/debug.keystore` 為本機檔案，已排除在 git 之外；首次建置時若不存在會自動產生）。
 
-### 5.2 App 內更新檢查
+### 5.2 每日提醒（v2.5）
+
+離線 App 沒有任何機制把你拉回去，v2.5 加了一個**每天 20:00 的本地通知**。開關在 **Data & settings → Daily reminder**，
+預設關閉，而且**只有在 Android 版才會出現**——瀏覽器分頁沒辦法在 20:00 自己醒來，掛一個做不到的開關只會騙人。
+
+| 動作 | 行為 |
+|---|---|
+| 打開 `Daily reminder` | 立刻排程今天（或明天）20:00 的鬧鐘；Android 13+ 會在這一刻**第一次**跳出通知權限對話框 |
+| 拒絕權限 | 原生端回報給 WebView，開關**自動切回 off** 並提示「Notifications are blocked」——不會留下一個永遠不會響的開關 |
+| 鬧鐘響了 | 發一則通知，寫出**今天還有幾個詞到期 🔥**（數字由 WebView 經 `LexiNative.setReminderDue()` 隨時推給原生）；到期數是 0 時改寫「今天到期的詞都複習完了 ✓」 |
+| 點通知 | 開 App；`onResume` **當場取消當天的通知**，明天的排程仍在 |
+| 開機 | `BOOT_COMPLETED` 重新排程（重開機會清掉所有鬧鐘） |
+| 關掉開關 | 取消鬧鐘並清掉已發出的那則通知 |
+
+**到期數是什麼時候算的**：原生層讀不到你的記錄，所以 WebView 每次重畫 Daily 卡（開 App、複習一題、增刪記錄）都會把當下的到期數推過去。鬧鐘是幾小時後才響的，所以顯示的是**最後一次開 App 時**的數字——它只會比實際少，不會誇大。
+
+**權限與排程的落差（實機務必留意）**：
+
+- **精確鬧鐘**：Android 13+ 對 targetSdk 33 以上的 App **預設不給** `SCHEDULE_EXACT_ALARM`。程式會用 `canScheduleExactAlarms()` 檢查，拿不到就**自動改用近似排程**（`setAndAllowWhileIdle`），通知仍會到，只是可能晚幾分鐘；想拿準點可在 設定 → 應用程式 → 特殊權限存取 → 鬧鐘與提醒 開啟。
+- **各家 ROM**：小米／華為／OPPO 等會限制背景排程（省電最佳化、自啟），可能需要手動允許「自啟」並把 App 排除在省電最佳化之外，否則鬧鐘可能被系統擋掉。
+
+### 5.3 App 內更新檢查
 
 App info 面板多了一個 **Updates** 區塊：
 
@@ -376,7 +398,7 @@ App info 面板多了一個 **Updates** 區塊：
 
 啟動時不會主動連線；只有你打開 App info 或按按鈕時才查。
 
-### 5.3 發版流程
+### 5.4 發版流程
 
 版本規則：**功能發佈 +0.1**（1.4 → 1.6）；只修錯、不動功能時發 **patch**（2.1 → 2.1.1）。
 不論哪一種，`versionCode` 一律 +1。
@@ -407,7 +429,7 @@ Release 的資產檔名固定為 `LexiCards.apk`，App 的更新檢查就是抓�
 ```bash
 cd build
 python3 build.py      # 合併零件 → ../index.html，並檢查 JS 語法、HTML id 對照、重複宣告
-python3 smoke.py      # headless Chromium 跑 359 項功能測試（手勢、拖放、Quiz、SRS、題型、統計、Related、匯出匯入、外觀），輸出截圖
+python3 smoke.py      # headless Chromium 跑 375 項功能測試（手勢、拖放、Quiz、SRS、題型、統計、Related、匯出匯入、每日提醒、外觀），輸出截圖
 python3 shots.py      # 產生 Records / Quiz 畫面截圖（/tmp/shot-*.png）
 python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始資料，見 6.3）
 ```
@@ -437,15 +459,16 @@ python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始�
 | `build/guide.js` | 使用說明（繁中撰寫，即時轉簡中）與它的語言切換 |
 | `build/update.js` | App 內更新檢查（GitHub Release ＋ `version.json` 備援） |
 | `build/nav.js`、`build/init.js` | 頁籤導覽與啟動流程 |
+| `build/native.js` | 原生橋接（震動／TTS／系統列／每日提醒 v2.5）：`NATIVE` 偵測、`pushReminder()` / `pushReminderDue()` 與權限結果回呼 `window.onReminderPermission` |
 | `build/activity.js` | 每日活動計數（v2.2）：目標環、連續天數、近 7 天正確率 |
 | `build/stats.js` | 學習統計面板（v2.3）：總量、各級掌握度、30 天趨勢 SVG、常錯詞 |
 | `build/skin.js`、`build/skin_gothic.js`、`build/skin_primevere.js` | 外觀系統：`SKINS` 設定表、套用 / 清除、選擇器；各款的圖像（base64） |
 | `build/skins/gothic/`、`build/skins/primevere/` | 各款素材：原圖 / `out/` 成品、`make.py` 生成腳本（同時產出 Android 資源） |
-| `build/smoke*.py`／`build/smoke_*.js` | 359 項功能測試 |
+| `build/smoke*.py`／`build/smoke_*.js` | 375 項功能測試 |
 | `build/shots.py` | 畫面截圖腳本 |
 | `build/make_data.py` | 內建詞彙表的資料管線 |
 | `version.json` | 目前版本與 APK 下載網址（更新檢查的備援來源） |
-| `android/` | 原生 WebView 外殼（Java、res、圖示、打包腳本） |
+| `android/` | 原生 WebView 外殼與每日提醒（`MainActivity`、v2.5 新增的 `ReminderReceiver`／通知 Channel、res、圖示、打包腳本） |
 
 ### 6.3 詞彙表資料管線
 
@@ -476,6 +499,7 @@ python3 build/make_data.py                # 約 2–3 分鐘
 5. 內建例句取自 Tatoeba 語料，自然但非教材句；少數罕見詞以手寫例句補足。
 6. CEFR 分級以 Oxford／字表為準，與其他機構的分級可能略有出入。
 7. 更新檢查需要連得到 GitHub；離線時 App info 會顯示無法連線，可改按 `Releases page` 手動確認。
+8. 每日提醒（v2.5）只在 Android 版存在，且受系統與 ROM 限制：Android 13+ 未授予精確排程權限時改用近似排程（可能晚幾分鐘）；小米／華為等可能需要手動允許自啟並排除省電最佳化，否則收不到（見 5.2 節）。通知上的到期數是「最後一次開 App 時」的數字，鬧鐘響時可能已經多了一些。
 
 ---
 
@@ -539,6 +563,29 @@ https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v1.7/LexiCards.apk
 ---
 
 ## 9. 修訂紀錄
+
+### v2.5
+
+| # | 做了什麼 | 原因 |
+|---|---|---|
+| 1 | **每日提醒通知**：Data & settings 新增 `Daily reminder` 開關（預設 off，**只有 Android 版顯示**）。打開後由 `ReminderReceiver` 用 `AlarmManager` 排程**每天 20:00** 的一則本地通知，寫出「今天還有 N 個詞到期 🔥」（N=0 改成「今天到期的詞都複習完了 ✓」）；通知響完立刻自我排下一天，`BOOT_COMPLETED` 在重開機後重新排程，**`MainActivity.onResume` 進 App 即取消當天的通知** | 離線 App 沒有任何機制把使用者拉回去；到期數只有 WebView 知道，所以每次 `renderDailyCard()` 都經 `LexiNative.setReminderDue()` 推給原生，鬧鐘幾小時後才讀得到那個數字 |
+| 2 | **權限照舊「零權限起家」**：安裝不彈任何對話框。`POST_NOTIFICATIONS` **只在使用者第一次打開開關時**才請求（Android 13+），被拒或系統整個關掉通知時，原生經 `window.onReminderPermission(false)` 回報，**WebView 把開關切回去**並提示 `Notifications are blocked`——不會留下一個永遠不會響的開關。Android 13+ 對 targetSdk 33+ 預設不給 `SCHEDULE_EXACT_ALARM`，故 `canScheduleExactAlarms()` 為 false 時**自動改用近似排程**而不是整個不排 | 「開關是開的但從來沒響過」是最糟的結果；寧可開關自己跳回去，也不要假裝它有效 |
+| 3 | **說明書與 README 同步**：說明書「間隔重複與每日目標」補每日提醒一則（十二個主題不變）；README 新增 **§5.2 每日提醒**（原 5.2／5.3 順延為 5.3／5.4）、§1.2 權限敘述改寫、§2.6 加一列、§6.2 加 `build/native.js` 一列、§7 加 ROM／排程限制 | 文件與功能不同步就是謊言；通知這種牽涉權限與 ROM 差異的功能，規則必須寫出來 |
+
+> 測試：headless Chromium 功能測試由 **359 項增加到 375 項**。新增的 16 項釘住：
+> 開關存在且 `role="switch"`、**瀏覽器版整個開關與說明都隱藏**、偽造原生橋後開關出現、
+> 預設 off、開啟後設定與 `localStorage` 都寫入、橋接收到 `setDailyReminder(true, 20, 0)`、`aria-checked` 跟著亮、
+> `pushReminderDue()` 送出當下到期數、`renderDailyCard()` 每次重畫都重推、授權成功開關維持 on、
+> **拒絕授權會把開關切回 off 並寫進 localStorage**、拒絕時有 `Notifications are blocked` 提示、
+> 說明文字隨開關狀態改變且都寫出 20:00、關閉時橋接收到 `setDailyReminder(false, 20, 0)`、空白鍵也能切、
+> 退回瀏覽器後橋接靜默且開關再次隱藏。
+>
+> 另修了一件測試抓到的事：寫第一版的「說明文字」斷言時抓到了自己 ——
+> 斷言寫的是開啟時的文案，但那一刻開關已經被「拒絕權限」那項測試關掉了。
+> 改成**兩種狀態都驗一次並要求文案不同**，順便把「說明要跟著設定走」這件事釘住。
+>
+> 同時把 §2.6 / §5 的權限敘述從「僅 INTERNET、ACCESS_NETWORK_STATE、VIBRATE」改成實際情況：
+> 多了三個權限，但沒有一個在安裝時跳出對話框。
 
 ### v2.4
 

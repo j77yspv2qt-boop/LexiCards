@@ -2,6 +2,7 @@ package com.lexicards.app;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.NotificationManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -35,6 +36,7 @@ public class MainActivity extends Activity {
 
     private static final int REQ_CREATE_FILE = 1001;
     private static final int REQ_CHOOSE_FILE = 1002;
+    private static final int REQ_NOTIFY_PERMISSION = 1003;   /* v2.5: the daily reminder */
 
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
@@ -206,6 +208,26 @@ public class MainActivity extends Activity {
                 }
             });
         }
+
+        /* v2.5 daily reminder: the web side owns the switch, this side owns the
+           schedule.  The hour arrives with the call so the two halves cannot
+           drift apart about when the reminder fires. */
+        @JavascriptInterface
+        public void setDailyReminder(final boolean on, final int hour, final int minute) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    applyDailyReminder(on, hour, minute);
+                }
+            });
+        }
+
+        /* the count the notification will quote - the WebView is the only
+           place that knows it, and the alarm may fire long after it was pushed */
+        @JavascriptInterface
+        public void setReminderDue(int count) {
+            ReminderReceiver.setDueCount(MainActivity.this, count);
+        }
     }
 
     /* a #RRGGBB string, or null when the argument is not one */
@@ -213,6 +235,95 @@ public class MainActivity extends Activity {
         if (value == null) return null;
         String v = value.trim();
         return v.matches("#[0-9a-fA-F]{6}") ? v : null;
+    }
+
+    /* Arm or disarm the daily reminder.  Turning it on is the only moment this
+       app ever asks for a permission: on Android 13+ the notification dialog
+       appears here and nowhere else, so an install still asks for nothing.
+       A refusal (or notifications switched off system-wide) is reported back to
+       the WebView, which flips the switch off again rather than leaving it
+       promising a nudge that will never arrive. */
+    private void applyDailyReminder(boolean on, int hour, int minute) {
+        ReminderReceiver.setEnabled(this, on);
+        if (!on) {
+            ReminderReceiver.cancel(this);
+            NotificationManager nm = notificationManager();
+            if (nm != null) nm.cancel(ReminderReceiver.NOTIF_ID);
+            return;
+        }
+        ReminderReceiver.setTime(this, hour, minute);
+        if (Build.VERSION.SDK_INT >= 33 &&
+                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(
+                new String[]{ android.Manifest.permission.POST_NOTIFICATIONS },
+                REQ_NOTIFY_PERMISSION);
+            return;                            /* decided in onRequestPermissionsResult */
+        }
+        if (!notificationsEnabled()) {
+            ReminderReceiver.setEnabled(this, false);
+            reportReminderPermission(false);
+            return;
+        }
+        ReminderReceiver.schedule(this);
+        reportReminderPermission(true);
+    }
+
+    private NotificationManager notificationManager() {
+        return (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+    }
+
+    private boolean notificationsEnabled() {
+        try {
+            NotificationManager nm = notificationManager();
+            return nm == null || nm.areNotificationsEnabled();
+        } catch (Throwable ignored) {
+            return true;
+        }
+    }
+
+    private void reportReminderPermission(final boolean granted) {
+        if (webView == null) return;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    webView.evaluateJavascript(
+                        "window.onReminderPermission && window.onReminderPermission(" +
+                        (granted ? "true" : "false") + ")", null);
+                } catch (Throwable ignored) { }
+            }
+        });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        if (requestCode == REQ_NOTIFY_PERMISSION) {
+            boolean granted = grantResults.length > 0 &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED &&
+                    notificationsEnabled();
+            if (granted) {
+                ReminderReceiver.schedule(this);
+            } else {
+                ReminderReceiver.setEnabled(this, false);
+            }
+            reportReminderPermission(granted);
+            return;
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        /* Opening the app is the answer to the notification, so today's is
+           cleared here.  The alarm itself stays armed (and is re-armed below,
+           which also repairs a schedule a reboot or a force-stop dropped). */
+        try {
+            NotificationManager nm = notificationManager();
+            if (nm != null) nm.cancel(ReminderReceiver.NOTIF_ID);
+        } catch (Throwable ignored) { }
+        if (ReminderReceiver.enabled(this)) ReminderReceiver.schedule(this);
     }
 
     /* enable / disable one launcher alias (DONT_KILL_APP: the app keeps

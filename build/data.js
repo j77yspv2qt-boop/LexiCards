@@ -4,7 +4,8 @@
 const SWITCHES = [
   { id: 'swHaptics', key: 'haptics' },
   { id: 'swTricky', key: 'quizTricky' },
-  { id: 'swSrs', key: 'srsEnabled' }
+  { id: 'swSrs', key: 'srsEnabled' },
+  { id: 'swReminder', key: 'reminderOn' }   /* daily reminder (v2.5, Android only) */
 ];
 
 function syncSettingsUI() {
@@ -12,6 +13,19 @@ function syncSettingsUI() {
     const el = document.getElementById(s.id);
     if (el) el.setAttribute('aria-checked', state.settings[s.key] ? 'true' : 'false');
   });
+  /* The daily reminder only means something inside the Android wrapper - a
+     browser tab cannot wake up at 20:00 - so the row stays out of the way
+     rather than showing a switch that would do nothing (v2.5). */
+  const remRow = document.getElementById('swReminder');
+  if (remRow) {
+    remRow.hidden = !NATIVE.isNative;
+    const remField = document.getElementById('reminderField');
+    if (remField) {
+      remField.hidden = !NATIVE.isNative;
+      const info = document.getElementById('reminderInfo');
+      if (info && NATIVE.isNative) info.textContent = reminderInfoText();
+    }
+  }
   const info = $('#storageInfo');
   if (info) {
     let bytes = 0;
@@ -72,6 +86,9 @@ function toggleSwitch(id) {
   state.settings[cfg.key] = !state.settings[cfg.key];
   saveSettings();
   syncSettingsUI();
+  /* the reminder switch is the one with a native side: flipping it arms or
+     disarms the daily alarm through the bridge (no-op in a browser) */
+  if (cfg.key === 'reminderOn' && typeof pushReminder === 'function') pushReminder();
 }
 
 function exportStamp() {

@@ -333,6 +333,12 @@
         <div class="switchrow" id="swSrs" role="switch" aria-checked="true" tabindex="0">
           <span>Spaced repetition (quiz due words first)</span><span class="switch"></span>
         </div>
+        <div class="switchrow" id="swReminder" role="switch" aria-checked="false" tabindex="0" hidden>
+          <span>Daily reminder at 20:00 (words due today)</span><span class="switch"></span>
+        </div>
+        <div class="field" id="reminderField" hidden>
+          <span class="field__hint" id="reminderInfo"></span>
+        </div>
         <label class="field">
           <span class="field__label">Daily goal (questions per day)</span>
           <input type="number" class="input" id="fDailyGoal" min="5" max="200" step="5" inputmode="numeric">

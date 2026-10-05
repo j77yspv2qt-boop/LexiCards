@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.lexicards.app"
-    android:versionCode="15"
-    android:versionName="2.4">
+    android:versionCode="16"
+    android:versionName="2.5">
 
     <uses-sdk
         android:minSdkVersion="24"
@@ -11,6 +11,16 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- The daily reminder (v2.5).  POST_NOTIFICATIONS is a dangerous
+         permission but nothing asks for it at install: the dialog appears only
+         when the user turns the reminder on.  SCHEDULE_EXACT_ALARM is denied
+         by default on API 33+, and the receiver falls back to the inexact alarm
+         when it is not granted.  RECEIVE_BOOT_COMPLETED is a normal permission,
+         so re-arming after a reboot also costs the user nothing. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <queries>
         <intent>
@@ -85,5 +95,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+
+        <!-- Fires the daily reminder and re-arms it after a reboot.  exported
+             because Android 12+ requires an explicit value here; the only
+             action in the filter is the protected BOOT_COMPLETED broadcast,
+             which no other app can send, and every other action is ignored. -->
+        <receiver
+            android:name=".ReminderReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

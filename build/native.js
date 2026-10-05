@@ -57,6 +57,56 @@ function openExternalUrl(url) {
 if (NATIVE.isNative) {
   document.documentElement.setAttribute('data-native', NATIVE.platform);
 }
+
+/* --------------------------- daily reminder (v2.5) ---------------------------
+   The switch lives in Data & settings, but arming the alarm is native work:
+   AlarmManager only exists inside the APK.  So the web side owns the setting
+   and pushes two things over the same LexiNative bridge the vibration and
+   system-bar calls already use - on/off (with the fixed 20:00 time) and the
+   current due count, which is what the notification text quotes.  In a
+   browser every call here is a no-op and the switch itself stays hidden. */
+const REMINDER_HOUR = 20;
+
+function pushReminder() {
+  if (!NATIVE.isNative || !NATIVE.api || typeof NATIVE.api.setDailyReminder !== 'function') return;
+  try {
+    NATIVE.api.setDailyReminder(!!state.settings.reminderOn, REMINDER_HOUR, 0);
+  } catch (e) { /* bridge unavailable - the setting still persists */ }
+}
+
+function pushReminderDue() {
+  if (!NATIVE.isNative || !NATIVE.api || typeof NATIVE.api.setReminderDue !== 'function') return;
+  try {
+    NATIVE.api.setReminderDue(typeof dueRecords === 'function' ? dueRecords().length : 0);
+  } catch (e) { /* ignore */ }
+}
+
+/* Called from native code after the Android 13+ permission dialog resolves.
+   A refusal cannot silently leave the switch ON promising a notification that
+   will never come - flip it back, save, and say why. */
+window.onReminderPermission = function (granted) {
+  if (granted) {
+    showToast('Daily reminder on - every day at ' + REMINDER_HOUR + ':00', 'ok');
+    return;
+  }
+  if (state.settings.reminderOn) {
+    state.settings.reminderOn = false;
+    saveSettings();
+    syncSettingsUI();
+  }
+  showToast('Notifications are blocked - the daily reminder stays off', 'warn');
+};
+
+/* the one line under the switch that says what turning it on actually does */
+function reminderInfoText() {
+  if (!NATIVE.isNative) return '';
+  return state.settings.reminderOn
+    ? 'Every day at ' + REMINDER_HOUR + ':00, one notification with today\'s due count. ' +
+      'Opening the app clears today\'s notification.'
+    : 'Off. Turn it on and the Android app notifies you once a day at ' +
+      REMINDER_HOUR + ':00, when words are due.';
+}
+
 /* Text-to-speech helper: plays MP3 URL if present, or fallback online audio, native TTS, or Web Speech Synthesis */
 let _currentAudio = null;
 function speakTerm(term, audioUrl) {

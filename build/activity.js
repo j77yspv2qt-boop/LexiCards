@@ -89,6 +89,9 @@ function renderDailyCard() {
   setText('#dailyCount', t.reviewed + ' / ' + goal);
   setText('#dailyStreak', String(activityStreak()));
   setText('#dailyDue', String(dueRecords().length));
+  /* keep the native reminder's number in step with the records (v2.5) - the
+     alarm may fire hours from now, so it reads the count we last pushed */
+  pushReminderDue();
   const wk = weekAccuracy();
   setText('#dailyWeek', wk === null ? '\u2014' : wk + '%');
   const go = $('#btnStartDue');

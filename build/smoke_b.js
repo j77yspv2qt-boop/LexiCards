@@ -1453,9 +1453,23 @@
     speakTerm = realSpeak;
 
     /* spell: type it out */
+    /* A phrase or a pattern has nothing to spell, so buildQuestion() always
+       gives those the choice type - which made "draw a spell question" a matter
+       of luck whenever the records pool still held a phrase, and the near-miss
+       step below failed at random.  Keep drawing until the type under test
+       actually shows up. */
+    var drawMode = async function (mode) {
+      for (var i = 0; i < 10; i++) {
+        var q = state.round.current;
+        if (q && q.mode === mode) return q;
+        nextCard();
+        await wait(70);
+      }
+      return state.round.current;
+    };
     setQuizMode('spell');
     await wait(160);
-    var sq = state.round.current;
+    var sq = await drawMode('spell');
     step('mode: spell asks for typing',
       !!sq && sq.mode === 'spell' &&
       document.getElementById('quizSpellWrap').hidden === false &&
@@ -1477,10 +1491,12 @@
     step('mode: the input locks once answered', spellInput.disabled === true);
     nextCard();
     await wait(140);
-    var sq2 = state.round.current;
+    var sq2 = await drawMode('spell');
     if (sq2 && sq2.mode === 'spell') {
+      /* the typo has to actually be a typo: a term ending in "z" would come
+         back as the correct word spelled with a z */
       document.getElementById('quizSpell').value =
-        sq2.term.slice(0, Math.max(2, sq2.term.length - 1)) + 'z';
+        sq2.term.slice(0, Math.max(2, sq2.term.length - 1)) + (/z$/i.test(sq2.term) ? 'q' : 'z');
       var spellBad = submitSpelling();
       step('mode: a near miss is marked from the first wrong character',
         spellBad === true && state.round.wrong >= 1 &&
@@ -1788,6 +1804,97 @@ step('import: a new word lands in Records with its Chinese and tags', (function 
         /^\d+ records - \d+ cached meanings - \d+ cached relations/.test(
           document.getElementById('storageInfo').textContent);
     })(), document.getElementById('storageInfo').textContent);
+
+    /* ---- 21. v2.5: the daily reminder switch and its native bridge ----
+       The feature is half native (AlarmManager lives in the APK), so these
+       steps fake the LexiNative host: the browser case is the app's real
+       "nothing to arm here" case, and the faked one is what the WebView
+       actually does inside the installed app. */
+    var remRow = document.getElementById('swReminder');
+    step('daily: the reminder switch sits in Data & settings',
+      !!remRow && remRow.getAttribute('role') === 'switch',
+      remRow ? remRow.textContent : 'missing');
+    step('daily: a browser never shows a switch it cannot honour', (function () {
+      syncSettingsUI();
+      return remRow.hidden === true && document.getElementById('reminderField').hidden === true;
+    })());
+    var remLog = [];
+    var realApi = NATIVE.api, realIsNative = NATIVE.isNative;
+    NATIVE.isNative = true;
+    NATIVE.api = {
+      setDailyReminder: function (on, h, m) { remLog.push('on:' + on + ':' + h + ':' + m); },
+      setReminderDue: function (n) { remLog.push('due:' + n); }
+    };
+    syncSettingsUI();
+    step('daily: inside the app the switch appears', remRow.hidden === false);
+    step('daily: it starts off', state.settings.reminderOn === false &&
+      remRow.getAttribute('aria-checked') === 'false');
+    step('daily: turning it on persists the setting', (function () {
+      toggleSwitch('swReminder');
+      return state.settings.reminderOn === true &&
+        JSON.parse(localStorage.getItem('lexi.settings.v1')).reminderOn === true;
+    })());
+    step('daily: ...and hands the host a 20:00 schedule',
+      remLog.length === 1 && remLog[0] === 'on:true:20:0', remLog.join(' | '));
+    step('daily: the row paints itself on', remRow.getAttribute('aria-checked') === 'true');
+    step('daily: the due count travels over the same bridge', (function () {
+      pushReminderDue();
+      return remLog[remLog.length - 1] === 'due:' + dueRecords().length;
+    })(), remLog[remLog.length - 1]);
+    step('daily: every re-render pushes the current count', (function () {
+      var before = remLog.length;
+      renderDailyCard();
+      return remLog.length === before + 1 &&
+        remLog[remLog.length - 1] === 'due:' + dueRecords().length;
+    })());
+    step('daily: a granted permission leaves the switch on', (function () {
+      window.onReminderPermission(true);
+      return state.settings.reminderOn === true &&
+        remRow.getAttribute('aria-checked') === 'true';
+    })());
+    step('daily: a refused permission flips the switch back off', (function () {
+      window.onReminderPermission(false);
+      return state.settings.reminderOn === false &&
+        JSON.parse(localStorage.getItem('lexi.settings.v1')).reminderOn === false &&
+        remRow.getAttribute('aria-checked') === 'false';
+    })());
+    step('daily: the refusal says what happened', (function () {
+      return document.getElementById('toasts').textContent.indexOf('Notifications are blocked') >= 0;
+    })(), document.getElementById('toasts').textContent.slice(-60));
+    step('daily: the hint explains the fixed time', (function () {
+      var info = document.getElementById('reminderInfo');
+      syncSettingsUI();
+      var off = info.textContent;
+      toggleSwitch('swReminder');
+      syncSettingsUI();
+      var on = info.textContent;
+      toggleSwitch('swReminder');
+      syncSettingsUI();
+      return off !== on && off.indexOf('20:00') >= 0 && on.indexOf('20:00') >= 0 &&
+        on.indexOf('Opening the app clears') >= 0;
+    })(), document.getElementById('reminderInfo').textContent);
+    step('daily: turning it off tells the host to cancel', (function () {
+      toggleSwitch('swReminder');                       /* on  */
+      toggleSwitch('swReminder');                       /* off */
+      return state.settings.reminderOn === false &&
+        remLog[remLog.length - 2] === 'on:true:20:0' && remLog[remLog.length - 1] === 'on:false:20:0';
+    })(), remLog.slice(-2).join(' | '));
+    step('daily: the keyboard switches it too', (function () {
+      remRow.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+      var on = state.settings.reminderOn === true && remLog[remLog.length - 1] === 'on:true:20:0';
+      toggleSwitch('swReminder');
+      return on && state.settings.reminderOn === false;
+    })());
+    NATIVE.api = realApi;
+    NATIVE.isNative = realIsNative;
+    syncSettingsUI();
+    step('daily: back in a browser the bridge is silent again', (function () {
+      var before = remLog.length;
+      pushReminder();
+      pushReminderDue();
+      return remLog.length === before && remRow.hidden === true &&
+        state.settings.reminderOn === false;
+    })());
   } catch (err) {
     R.ok = false;
     R.steps.push({ name: 'exception thrown', pass: false, info: String((err && err.stack) || err).slice(0, 400) });

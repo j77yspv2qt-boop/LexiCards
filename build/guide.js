@@ -92,7 +92,8 @@ const GUIDE_SECTIONS = [
       'Quiz 頁頂部的圓環顯示今日答題進度，旁邊是連續天數、今天到期數與近 7 天正確率',
       '每日達到目標時會輕震一下；目標可在 Data & settings → Daily goal 調整',
       'Quiz 範圍新增 Due today 與 My wrong list：後者收集常答錯的詞，答對數超過答錯數就自動畢業',
-      '不想要這套排程？Data & settings → Spaced repetition 關掉即可回到純隨機加權'
+      '不想要這套排程？Data & settings → Spaced repetition 關掉即可回到純隨機加權',
+      '每日提醒（v2.5，僅 Android）：Data & settings 打開 Daily reminder，每天 20:00 通知你今天還有幾個詞到期；一進 App 當天的通知就自動取消'
     ]
   },
   {

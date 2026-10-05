@@ -79,6 +79,7 @@ def main():
     # 3. Compile Java sources
     java_files = [
         os.path.join(BASE, "src", "com", "lexicards", "app", "MainActivity.java"),
+        os.path.join(BASE, "src", "com", "lexicards", "app", "ReminderReceiver.java"),
         os.path.join(GEN_DIR, "com", "lexicards", "app", "R.java")
     ]
     run([

@@ -1,10 +1,10 @@
 {
-  "version": "2.4",
+  "version": "2.5",
   "released": "2026-10-05",
   "apk": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest/download/LexiCards.apk",
-  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.4/LexiCards.apk",
+  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.5/LexiCards.apk",
   "page": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest",
   "mirror_page": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@main/",
-  "notes": "Card knowledge and data (v2.4): cards now carry a Related block under the example - the word family is worked out from the bundled deck offline (create / creation / creative), and similar / opposite / related words come from Datamuse, cached with the meanings and refreshed after 30 days; tapping any chip looks that word up on the spot. Data & settings gains Export CSV (spreadsheet, UTF-8 BOM), Export for Anki (tab separated, three columns) and Import CSV / TSV that reads our own export, an Anki export or a plain word list, only ever filling in blanks; the sheet also says when you last exported and nudges once after 30 days without one."
+  "notes": "A daily nudge (v2.5): Data & settings gains a Daily reminder switch - off by default, and only shown in the installed app, because a browser tab cannot wake up at 20:00. Turn it on and Android schedules one local notification a day at 20:00 quoting how many words are due today (today's notice is cleared the moment you open the app); the alarm re-arms itself every night and after a reboot. Nothing is asked at install: the notification permission is requested the first time you switch the reminder on, and a refusal flips the switch back off instead of promising a reminder that would never arrive. Where the system withholds exact alarms (Android 13+), the reminder falls back to an inexact alarm rather than dropping silently."
 }
 
