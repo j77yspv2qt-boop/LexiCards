@@ -329,6 +329,43 @@ body[data-revsub="records"] .fab{display:grid}
 .stat__k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
 .quiz__wronglist{margin-top:14px}
 
+/* ---------- question types (v2.3) ---------- */
+.quiz__modes{margin:8px 0 10px;padding:3px}
+.quiz__modes .seg{font-size:12.5px;padding:7px 4px}
+.quiz__term--zh{font-size:21px;line-height:1.45}
+.quiz__speak{display:flex;flex-direction:column;align-items:center;gap:4px;margin:4px auto 0;padding:13px 22px;
+  border-radius:var(--radius-sm);background:var(--accent-soft);color:var(--primary-dark);
+  font-weight:700;font-size:13px}
+.quiz__speak:active{transform:translateY(1px)}
+.quiz__speak.is-speaking{box-shadow:inset 0 0 0 2px var(--primary)}
+.quiz__speakicon{font-size:28px;line-height:1}
+.quiz__spell{display:flex;gap:8px;margin-top:2px}
+.quiz__spell .input{flex:1}
+.spell-diffline{margin-top:10px;font-size:14px;color:var(--muted);word-break:break-word}
+.spell-diff{background:var(--danger-soft);color:var(--danger-dark);border-radius:4px;padding:0 2px;font-weight:700}
+.spell-difflabel{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+
+/* ---------- learning statistics sheet (v2.3) ---------- */
+.statgrid{display:flex;gap:8px;margin:0 0 4px}
+.stats__h{font-size:12px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin:20px 0 9px}
+.stats__row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13.5px}
+.stats__lv{width:22px;flex:none;font-weight:800;color:var(--primary-dark)}
+.stats__bar{flex:1;height:8px;border-radius:var(--pill);background:var(--accent-soft);overflow:hidden}
+.stats__fill{display:block;height:100%;border-radius:var(--pill);background:var(--primary)}
+.stats__num{width:128px;flex:none;text-align:right;color:var(--muted);font-size:12px}
+.stats__svg{width:100%;height:96px;display:block}
+.stats__line{fill:none;stroke:var(--primary);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.stats__area{fill:var(--accent-soft);stroke:none}
+.stats__dot{fill:var(--primary)}
+.stats__axis{stroke:var(--line);stroke-width:1}
+.stats__axislabels{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:5px}
+.stats__word{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:10px 12px;margin:6px 0;border-radius:var(--radius-sm);border:1px solid var(--line);
+  background:var(--surface);font-size:14.5px}
+.stats__term{font-weight:700}
+.stats__meta{color:var(--muted);font-size:12px;white-space:nowrap}
+.stats__empty{font-size:13.5px;color:var(--muted);margin:8px 0}
+
 /* ---------- daily goal card (v2.2) ---------- */
 .dailycard{display:flex;gap:14px;align-items:center;padding:14px;margin:0 0 10px;
   border-radius:var(--radius);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)}
@@ -659,6 +696,7 @@ body[data-revsub="records"] .fab{display:grid}
           <option value="seen">Most reviewed</option>
           <option value="due">Due today</option>
         </select>
+        <button type="button" class="iconbtn" id="btnStats" aria-label="Learning statistics" title="Learning statistics">&#128202;</button>
         <button type="button" class="iconbtn" id="btnData" aria-label="Data and settings">&#8943;</button>
       </div>
 
@@ -707,14 +745,28 @@ body[data-revsub="records"] .fab{display:grid}
           </select>
           <span class="count count--inline" id="quizPoolInfo"></span>
         </div>
+        <div class="segmented segmented--sm quiz__modes" id="quizModeSeg" role="tablist" aria-label="Question type">
+          <button type="button" class="seg is-active" data-mode="meaning" role="tab">Meaning</button>
+          <button type="button" class="seg" data-mode="spell" role="tab">Spell</button>
+          <button type="button" class="seg" data-mode="listen" role="tab">Listen</button>
+          <button type="button" class="seg" data-mode="reverse" role="tab">Reverse</button>
+        </div>
         <div class="quiz__prompt" id="quizPrompt">
           <span class="chip chip--word" id="quizType">Word</span>
           <span class="chip chip--src" id="quizLevel" hidden></span>
           <div class="quiz__term" id="quizTerm">&mdash;</div>
           <div class="quiz__phon" id="quizPhon"></div>
+          <button type="button" class="quiz__speak" id="btnQuizSpeak" hidden aria-label="Play pronunciation">
+            <span class="quiz__speakicon" aria-hidden="true">&#128266;</span>
+            <span>Tap to hear it</span>
+          </button>
         </div>
         <div class="quiz__ask" id="quizAsk">Which one is the meaning?</div>
         <div class="quiz__options" id="quizOptions" role="group" aria-label="Meaning options"></div>
+        <div class="quiz__spell" id="quizSpellWrap" hidden>
+          <input type="text" class="input" id="quizSpell" placeholder="Type the English word..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button type="button" class="btn btn--primary btn--sm" id="btnQuizSpell">Check</button>
+        </div>
         <div class="quiz__feedback" id="quizFeedback"></div>
         <div class="quiz__answer" id="quizAnswer" hidden></div>
         <div class="quiz__actions">
@@ -906,6 +958,31 @@ body[data-revsub="records"] .fab{display:grid}
     </div>
   </div>
 
+  <!-- learning statistics: totals, mastery by level, 30-day trend, most missed -->
+  <div class="sheet" id="sheetStats" role="dialog" aria-modal="true" aria-labelledby="statsTitle" aria-hidden="true">
+    <div class="sheet__panel">
+      <div class="sheet__head">
+        <h2 id="statsTitle">Your progress</h2>
+        <button type="button" class="iconbtn" data-close="sheetStats" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="sheet__body">
+        <div class="statgrid" id="statsOverview"></div>
+
+        <h3 class="stats__h">Mastery by level</h3>
+        <div id="statsLevels"></div>
+
+        <h3 class="stats__h">Accuracy, last 30 days</h3>
+        <div id="statsTrend"></div>
+
+        <h3 class="stats__h">Most missed</h3>
+        <div id="statsTop"></div>
+      </div>
+      <div class="sheet__foot">
+        <button type="button" class="btn btn--primary" data-close="sheetStats">Done</button>
+      </div>
+    </div>
+  </div>
+
   <!-- app info: version + Definition in Chinese script -->
   <div class="sheet" id="sheetInfo" role="dialog" aria-modal="true" aria-labelledby="infoTitle" aria-hidden="true">
     <div class="sheet__panel">
@@ -1009,7 +1086,7 @@ const LS_KEYS = {
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */
@@ -1019,6 +1096,7 @@ const DEFAULT_SETTINGS = {
   autoNextDelayMs: 850,
   strictQuiz: false,
   quizScope: 'records',            /* what the Quiz draws questions from */
+  quizMode: 'meaning',             /* meaning | spell | listen | reverse (v2.3) */
   quizTricky: true,                /* build the wrong options from confusable words */
   srsEnabled: true,                /* quiz due words first (spaced repetition) */
   dailyGoal: 20,                   /* questions per day shown on the Quiz ring */
@@ -4296,14 +4374,29 @@ const GUIDE_SECTIONS = [
     ]
   },
   {
-    h: 'Quiz：三選一測驗',
+    h: 'Quiz：四種題型（三選一測驗）',
     ul: [
       '上方選範圍：My saved words、Due today（今天到期）、My wrong list，或任一 CEFR 等級（會從內建詞庫出題）',
+      '範圍下方可切題型：Meaning（看英字選中文）、Reverse（看中文選英字）、' +
+        'Listen（只播發音、可重播）、Spell（自己打字拼出來，按 Enter 或 Check）',
+      'Reverse 與 Listen 的選項是外形相近的英文字（拼寫接近、共用字首字尾）；' +
+        'Spell 的大小寫與空格不算錯，拼錯會從第一個錯字標起',
+      '片語與句式沒有可聽可拼的單字形態，固定用 Meaning 題型',
       '想讓干擾選項更難：Data & settings → Tricky Quiz options',
       '答對／答錯都有動畫與震動；答完可按 Next，或把這題 Add to Records',
       'Skip 跳過這題、Reset round 重新開始這一回合',
       '下方統計：Round、Correct、Missed、Streak、Accuracy；' +
         'Missed in this round 會列出這回合答錯的詞'
+    ]
+  },
+  {
+    h: '學習統計（Your progress）',
+    p: ['Records 工具列的 📊 按鈕開啟統計面板（App 內、使用說明之外）：'],
+    ul: [
+      '四個數字：已儲存詞數、累計複習次數、總正確率、現在到期數',
+      '各 CEFR 等級的掌握度長條：該級有多少詞、答對率幾成；沒練過的詞不會假裝成 0%',
+      '近 30 天每日正確率折線（純 SVG 畫的）：沒有複習的日子是斷點，不會被畫成 0%',
+      'Most missed：常答錯的詞依錯誤次數排序，點一列直接開該詞的編輯面板'
     ]
   },
   {
@@ -4510,21 +4603,87 @@ function pickWeighted(pool) {
   return candidates[candidates.length - 1];
 }
 
-/* one question = the term plus QUIZ_OPTIONS Chinese meanings, exactly one of
-   which is right, in random order */
+/* ------------------------------- question types -------------------------------
+   'meaning' is the original three-Chinese-choices question.  The other three
+   turn it into production instead of recognition: 'reverse' shows the Chinese
+   and asks for the word, 'listen' only plays the audio, and 'spell' makes the
+   learner type it.  All four share buildQuestion / answerQuiz - only what the
+   prompt shows and what the options contain changes. */
+const QUIZ_MODES = ['meaning', 'spell', 'listen', 'reverse'];
+
+function quizMode() {
+  const m = state.settings.quizMode || 'meaning';
+  return QUIZ_MODES.indexOf(m) >= 0 ? m : 'meaning';
+}
+
+/* Word options for the reverse / listening modes: the term plus two look-alike
+   words, scored with the same confusion metric the Chinese distractors use
+   (edit distance, shared prefix, shared gloss characters). */
+function pickWordOptions(item) {
+  const key = normKey(item.term);
+  const pool = distractorPool(item);
+  const scored = [];
+  for (let i = 0; i < pool.length; i++) {
+    const c = pool[i];
+    if (!c || !c.term || normKey(c.term) === key) continue;
+    scored.push({ term: c.term, s: confusionScore(item.term, glossText(item), c.term, glossText(c)) });
+  }
+  if (!scored.length) return null;
+  let candidates = scored;
+  if (state.settings.quizTricky) {
+    scored.sort((x, y) => y.s - x.s);
+    candidates = scored.slice(0, Math.min(scored.length, QUIZ_OPTIONS * 8));
+  }
+  const picked = [];
+  const used = Object.create(null);
+  used[key] = true;
+  const bag = shuffle(candidates);
+  for (let i = 0; i < bag.length && picked.length < QUIZ_OPTIONS - 1; i++) {
+    const k = normKey(bag[i].term);
+    if (used[k]) continue;
+    used[k] = true;
+    picked.push({ text: bag[i].term, correct: false });
+  }
+  if (picked.length < QUIZ_OPTIONS - 1) return null;
+  return shuffle([{ text: item.term, correct: true }].concat(picked));
+}
+
+/* one question = the term plus QUIZ_OPTIONS answers, exactly one of which is
+   right, in random order */
 function buildQuestion(item) {
   const correct = glossText(item);
   if (!correct) return null;
-  const wrongs = pickDistractors(item, distractorPool(item), QUIZ_OPTIONS - 1);
-  if (wrongs.length < QUIZ_OPTIONS - 1) return null;
-  const options = [{ text: correct, correct: true }]
-    .concat(wrongs.map(w => ({ text: w.text, correct: false })));
+  const type = item.type || 'word';
+  /* a phrase or a sentence pattern cannot be spelled out or heard as a word */
+  const mode = type === 'word' ? quizMode() : 'meaning';
+  let options = null;
+  if (mode === 'meaning') {
+    const wrongs = pickDistractors(item, distractorPool(item), QUIZ_OPTIONS - 1);
+    if (wrongs.length < QUIZ_OPTIONS - 1) return null;
+    options = shuffle([{ text: correct, correct: true }]
+      .concat(wrongs.map(w => ({ text: w.text, correct: false }))));
+  } else if (mode === 'reverse' || mode === 'listen') {
+    options = pickWordOptions(item);
+    if (!options) return null;              /* nextQuestion() retries, then shows the empty state */
+  }
   const q = {
-    term: item.term, type: item.type || 'word', level: item.level || '',
+    term: item.term, type: type, level: item.level || '', mode: mode,
     zh: item.zh || [], phonetic: item.phonetic || '', example: item.example || '',
-    record: item.record || null, options: shuffle(options), picked: -1
+    record: item.record || null, options: options || [], picked: -1, typed: ''
   };
   return q;
+}
+
+/* marks from the first differing character on, so a near miss shows where it
+   went wrong without spelling the whole word out */
+function spellDiffHTML(typed, term) {
+  const a = String(typed || '').trim(), b = String(term || '');
+  if (!a.length || !b.length) return '';
+  let i = 0;
+  while (i < a.length && i < b.length && a.charAt(i) === b.charAt(i)) i++;
+  const rest = a.slice(i) || b.slice(i);
+  return escapeHTML(a.slice(0, i)) + '<span class="spell-diff">' + escapeHTML(rest) + '</span>' +
+    (a.slice(i) ? ' &rarr; ' + escapeHTML(b) : '');
 }
 
 function nextQuestion() {
@@ -4619,7 +4778,16 @@ function flash(el, cls) {
   el.classList.add(cls);
 }
 
+/* what the prompt asks, per question type */
+const QUIZ_ASK = {
+  meaning: 'Which one is the meaning?',
+  reverse: 'Which word is this?',
+  listen : 'Listen and choose the word',
+  spell  : 'Type the English word'
+};
+
 function paintQuestion(q) {
+  const mode = q.mode || 'meaning';
   const chip = $('#quizType');
   if (chip) {
     chip.className = 'chip chip--' + (q.type || 'word');
@@ -4630,14 +4798,32 @@ function paintQuestion(q) {
     lvl.hidden = !q.level;
     lvl.textContent = q.level || '';
   }
-  setText('#quizTerm', q.term);
-  setText('#quizPhon', q.phonetic || '');
+  /* 'listen' shows no written word at all - the ear does the work */
+  const isZh = mode === 'reverse' || mode === 'spell';
+  setText('#quizTerm', isZh ? (q.zh[0] || '') : q.term);
+  const termEl = $('#quizTerm');
+  if (termEl) {
+    termEl.hidden = mode === 'listen';
+    termEl.className = 'quiz__term' + (isZh ? ' quiz__term--zh' : '');
+  }
+  /* the phonetic would spell the word out - only the meaning mode may show it */
+  setText('#quizPhon', mode === 'meaning' ? (q.phonetic || '') : '');
+  const phonEl = $('#quizPhon');
+  if (phonEl) phonEl.hidden = mode !== 'meaning';
 
+  const speakBtn = $('#btnQuizSpeak');
+  if (speakBtn) speakBtn.hidden = mode !== 'listen';
+  const spellWrap = $('#quizSpellWrap');
+  if (spellWrap) spellWrap.hidden = mode !== 'spell';
+  const input = $('#quizSpell');
+  if (input) { input.value = ''; input.disabled = false; }
+
+  setText('#quizAsk', QUIZ_ASK[mode] || QUIZ_ASK.meaning);
   const box = $('#quizOptions');
   if (box) {
-    box.hidden = false;
+    box.hidden = mode === 'spell';
     box.className = 'quiz__options';
-    box.innerHTML = q.options.map(quizOptionHTML).join('');
+    if (mode !== 'spell') box.innerHTML = q.options.map(quizOptionHTML).join('');
   }
   const prompt = $('#quizPrompt');
   if (prompt) prompt.className = 'quiz__prompt';
@@ -4655,8 +4841,28 @@ function paintQuestion(q) {
     add.textContent = known ? '\u2713 In Records' : '+ Add to Records';
     add.classList.toggle('is-done', known);
   }
+  if (mode === 'listen') setTimeout(() => speakTerm(q.term, q.audio || ''), 120);
   updateQuizStats();
   updatePoolInfo();
+}
+
+/* typing mode: the typed word becomes the picked option and the real word the
+   other one, so the single answer path still owns the round, the stats, the
+   feedback and the activity counters */
+function submitSpelling() {
+  const q = state.round && state.round.current;
+  if (!q || state.round.answered || (q.mode || 'meaning') !== 'spell') return false;
+  const input = $('#quizSpell');
+  if (!input) return false;
+  const typed = String(input.value || '');
+  if (!normText(typed)) { showToast('Type the word first', 'warn', 1600); return false; }
+  const ok = normText(typed) === normText(q.term);
+  q.typed = typed;
+  /* option 0 is always what the learner typed - its own correct flag decides
+     the outcome; option 1 just carries the real word for the reveal */
+  q.options = [{ text: typed, correct: ok }, { text: q.term, correct: !ok }];
+  answerQuiz(0);
+  return true;
 }
 
 /* Pull a question and put it on screen. */
@@ -4778,6 +4984,7 @@ function answerQuiz(index) {
   state.round.answered = true;
   q.picked = index;
   const ok = !!chosen.correct;
+  const mode = q.mode || 'meaning';
 
   const box = $('#quizOptions');
   if (box) {
@@ -4787,6 +4994,8 @@ function answerQuiz(index) {
       else if (i === index) el.classList.add('is-wrong');
     });
   }
+  const input = $('#quizSpell');
+  if (input) input.disabled = true;
 
   state.round.total++;
   if (ok) {
@@ -4803,8 +5012,23 @@ function answerQuiz(index) {
     flash($('#quizPrompt'), 'is-wrong');
     vibrate(HAPTIC.wrong);                        /* two light pulses */
     const fb = $('#quizFeedback');
-    if (fb) { fb.className = 'quiz__feedback no'; fb.textContent = 'Not quite - the right meaning is highlighted'; }
+    if (fb) {
+      fb.className = 'quiz__feedback no';
+      fb.textContent = mode === 'spell' ? 'Not quite - the word is revealed below'
+        : mode === 'meaning' ? 'Not quite - the right meaning is highlighted'
+        : 'Not quite - the right word is highlighted';
+    }
     renderAnswerPanel(q);
+    /* a typed near miss gets its first wrong character marked */
+    if (mode === 'spell' && q.typed) {
+      const host = $('#quizAnswer');
+      if (host && !host.querySelector('.spell-diffline')) {
+        const line = document.createElement('div');
+        line.className = 'spell-diffline';
+        line.innerHTML = '<span class="spell-difflabel">You typed</span>' + spellDiffHTML(q.typed, q.term);
+        host.appendChild(line);
+      }
+    }
   }
   touchStats(q.record, ok);
   recordActivity(ok);
@@ -4872,6 +5096,19 @@ function setQuizScope(scope) {
   renderQuestion();
 }
 
+/* switch question type: a new round, same scope, and the segmented control
+   follows along with the saved setting */
+function setQuizMode(mode) {
+  if (QUIZ_MODES.indexOf(mode) < 0) mode = 'meaning';
+  state.settings.quizMode = mode;
+  saveSettings();
+  $$('#quizModeSeg .seg').forEach(b => b.classList.toggle('is-active', b.dataset.mode === mode));
+  clearRoundTimer();
+  state.round = newRound();
+  renderWrongList();
+  renderQuestion();
+}
+
 /* kept for refreshRecords() - show or hide the Quiz surfaces */
 function refreshQuizState() {
   const pane = $('#quizPane');
@@ -4912,6 +5149,28 @@ function initQuiz() {
   /* summary card: jump straight into the due queue */
   const start = $('#btnStartDue');
   if (start) start.addEventListener('click', () => setQuizScope('due'));
+
+  /* question type switch (v2.3) */
+  $$('#quizModeSeg .seg').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.mode === quizMode());
+    b.addEventListener('click', () => setQuizMode(b.dataset.mode));
+  });
+
+  /* typing mode: Enter or the Check button submits, the microphone icon replays */
+  const spellInput = $('#quizSpell');
+  if (spellInput) spellInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); submitSpelling(); }
+  });
+  const spellBtn = $('#btnQuizSpell');
+  if (spellBtn) spellBtn.addEventListener('click', submitSpelling);
+  const speakBtn = $('#btnQuizSpeak');
+  if (speakBtn) speakBtn.addEventListener('click', () => {
+    const q = state.round && state.round.current;
+    if (!q || (q.mode || 'meaning') !== 'listen') return;
+    speakTerm(q.term, q.audio || '');
+    speakBtn.classList.add('is-speaking');
+    setTimeout(() => speakBtn.classList.remove('is-speaking'), 800);
+  });
 
   /* desktop: 1 / 2 / 3 pick an option, Enter or Space moves on */
   document.addEventListener('keydown', e => {
@@ -5032,6 +5291,159 @@ function renderDailyCard() {
   }
 }
 
+/* =====================================================================
+   Learning statistics (v2.3)
+
+   Everything is derived from what is already stored - record stats for the
+   totals and the mastery bars, state.activity for the daily trend - so the
+   sheet can never disagree with the pages it summarises.  Charts are hand-
+   rolled SVG using only the skin's CSS variables: no library, no canvas,
+   and every skin keeps its own colours.
+   ===================================================================== */
+
+function statsTotals() {
+  let seen = 0, correct = 0, wrong = 0;
+  state.records.forEach(r => {
+    const st = (r && r.stats) || {};
+    seen += st.seen || 0;
+    correct += st.correct || 0;
+    wrong += st.wrong || 0;
+  });
+  const answered = correct + wrong;
+  return {
+    saved: state.records.length,
+    seen: seen, correct: correct, wrong: wrong,
+    accuracy: answered ? Math.round(correct / answered * 100) : null
+  };
+}
+
+/* saved words per CEFR level (words the deck has no level for land in the
+   last row) with the share of right answers in each */
+function statsLevelRows() {
+  const rows = CEFR_LEVELS.map(level => ({ level: level, words: 0, correct: 0, wrong: 0 }));
+  const unleveled = { level: '—', words: 0, correct: 0, wrong: 0 };
+  state.records.forEach(r => {
+    const lv = cefrOf(r.term);
+    let row = lv ? null : unleveled;
+    if (lv) rows.forEach(x => { if (x.level === lv) row = x; });
+    if (!row) return;
+    row.words++;
+    row.correct += (r.stats && r.stats.correct) || 0;
+    row.wrong += (r.stats && r.stats.wrong) || 0;
+  });
+  return rows.concat(unleveled.words ? [unleveled] : []).filter(x => x.words);
+}
+
+/* one entry per local day, oldest first, missing days included as zeros */
+function statsSeries(days) {
+  const out = [];
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now.getTime());
+    d.setDate(d.getDate() - i);
+    const key = dayKey(d);
+    const t = state.activity[key];
+    out.push({ date: key, reviewed: t ? t.reviewed || 0 : 0, correct: t ? t.correct || 0 : 0 });
+  }
+  return out;
+}
+/* a line of daily accuracy; days with no reviews are a gap, not a zero, so
+   the chart never claims a 0% the learner never earned */
+function statsTrendSVG(series) {
+  const known = series.filter(d => d.reviewed > 0);
+  if (!known.length) {
+    return '<p class="stats__empty">No reviews in this window yet &mdash; the line shows up once you answer a few questions.</p>';
+  }
+  const W = 320, H = 96, padX = 8, padY = 12;
+  const span = series.length - 1 || 1;
+  const xOf = i => padX + i * (W - padX * 2) / span;
+  const yOf = acc => padY + (1 - acc) * (H - padY * 2);
+  const pts = series.map((d, i) => ({
+    x: xOf(i), y: yOf(d.correct / d.reviewed), acc: d.correct / d.reviewed, d: d
+  })).filter(p => p.d.reviewed > 0);
+  const line = pts.map((p, i) => (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
+  const area = line + ' L' + pts[pts.length - 1].x.toFixed(1) + ' ' + (H - padY) +
+    ' L' + pts[0].x.toFixed(1) + ' ' + (H - padY) + ' Z';
+  const dots = pts.map(p =>
+    '<circle class="stats__dot" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="2.4">' +
+    '<title>' + p.d.date + ': ' + Math.round(p.acc * 100) + '% (' + p.d.reviewed + ')</title></circle>').join('');
+  return '<svg class="stats__svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" ' +
+    'role="img" aria-label="Daily accuracy over the last ' + series.length + ' days">' +
+    '<line class="stats__axis" x1="' + padX + '" y1="' + (H - padY) + '" x2="' + (W - padX) + '" y2="' + (H - padY) + '"/>' +
+    '<line class="stats__axis" x1="' + padX + '" y1="' + padY + '" x2="' + (W - padX) + '" y2="' + padY + '"/>' +
+    '<path class="stats__area" d="' + area + '"/>' +
+    '<path class="stats__line" d="' + line + '"/>' + dots + '</svg>' +
+    '<div class="stats__axislabels"><span>' + series[0].date.slice(5) + '</span>' +
+    '<span>' + series[series.length - 1].date.slice(5) + '</span></div>';
+}
+
+/* the words the learner keeps missing, worst first, each one a link into its
+   own entry sheet */
+function statsTopMissed(n) {
+  return state.records
+    .filter(r => r.stats && r.stats.wrong > 0)
+    .slice()
+    .sort((a, b) => (b.stats.wrong - a.stats.wrong) || ((a.stats.correct || 0) - (b.stats.correct || 0)))
+    .slice(0, n || 10);
+}
+
+function statsTile(label, value) {
+  return '<div class="stat"><div class="stat__v">' + value + '</div>' +
+    '<div class="stat__k">' + escapeHTML(label) + '</div></div>';
+}
+
+function renderStats() {
+  const t = statsTotals();
+  const ov = $('#statsOverview');
+  if (ov) {
+    ov.innerHTML = statsTile('Saved', t.saved) + statsTile('Reviews', t.seen) +
+      statsTile('Accuracy', t.accuracy === null ? '—' : t.accuracy + '%') +
+      statsTile('Due now', dueRecords().length);
+  }
+  const lv = $('#statsLevels');
+  if (lv) {
+    const rows = statsLevelRows();
+    lv.innerHTML = rows.length ? rows.map(r => {
+      const answered = r.correct + r.wrong;
+      const pct = answered ? Math.round(r.correct / answered * 100) : 0;
+      return '<div class="stats__row">' +
+        '<span class="stats__lv">' + escapeHTML(r.level) + '</span>' +
+        '<span class="stats__bar"><span class="stats__fill" style="width:' + (answered ? pct : 0) + '%"></span></span>' +
+        '<span class="stats__num">' + r.words + ' word' + (r.words === 1 ? '' : 's') +
+        (answered ? ' &middot; ' + pct + '%' : ' &middot; untested') + '</span></div>';
+    }).join('') : '<p class="stats__empty">No saved words yet &mdash; save a few and the levels fill up.</p>';
+  }
+  const tr = $('#statsTrend');
+  if (tr) tr.innerHTML = statsTrendSVG(statsSeries(30));
+  const top = $('#statsTop');
+  if (top) {
+    const list = statsTopMissed(10);
+    top.innerHTML = list.length ? list.map(r =>
+      '<button type="button" class="stats__word" data-id="' + escapeHTML(r.id) + '">' +
+      '<span class="stats__term">' + escapeHTML(r.term) + '</span>' +
+      '<span class="stats__meta">' + r.stats.wrong + ' missed &middot; ' +
+      (r.stats.correct || 0) + ' correct</span></button>').join('')
+      : '<p class="stats__empty">No misses yet &mdash; that is the whole idea.</p>';
+  }
+}
+
+function openStats() {
+  renderStats();
+  openSheet('sheetStats');
+}
+
+function initStats() {
+  const btn = $('#btnStats');
+  if (btn) btn.addEventListener('click', openStats);
+  /* a word in the "most missed" list opens that entry, the sheet gets out of the way */
+  const top = $('#statsTop');
+  if (top) top.addEventListener('click', e => {
+    const b = e.target.closest('.stats__word');
+    if (!b) return;
+    closeSheet('sheetStats');
+    openEntrySheet(b.getAttribute('data-id'));
+  });
+}
 /* generated by build/skins/gothic/make.py - edit the source art, not this */
 const SKIN_GOTHIC = {
   icons: {
@@ -6264,6 +6676,7 @@ function init() {
   initDataSheet();
   initInfoSheet();
   initQuiz();
+  initStats();
   initGlobalGuards();
 
   setEntryType('word');

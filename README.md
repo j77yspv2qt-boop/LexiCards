@@ -5,7 +5,7 @@
 內建 Oxford 3000/5000 完整詞庫的中文釋義、音標與例句，**沒有網路也能學**；測驗以 CEFR 程度出題，答題有干擾項、動畫與震動回饋；所有記錄只存在你自己的裝置，並且有滾動備份。
 
 - 網頁版：`index.html`（零依賴、零建置，雙擊即用）
-- Android 版：Releases 頁的 `LexiCards.apk`（v2.2，約 3.0 MB）
+- Android 版：Releases 頁的 `LexiCards.apk`（v2.3，約 3.0 MB）
 
 ---
 
@@ -107,7 +107,19 @@ App 共**四個頁面**，由左至右依序為 **Discover → My Cards → Reco
 - **點一列** → 編輯面板：詞、類型、中文釋義（多義項以 `/` 分隔）、英文解釋、音標、筆記、標籤；`Fetch meaning` 可自動抓取預填
 - **紅色 ✕** 刪除（附確認框；滾動備份仍保留，可事後還原）
 - **右下 `+`**：手動新增詞語 / 片語 / 句式
+- **📊 左上圖示**：開啟學習統計面板（見下方 2.4.1）
 - **右上 `⋯`**：開啟 Data & settings
+
+### 2.4.1 學習統計（v2.3）
+
+Records 工具列的 📊 開啟一個全螢幕面板，內容全部由既有資料推導（記錄的 stats + 每日活動計數），純 SVG 畫圖、零外部依賴：
+
+| 區塊 | 內容 |
+|---|---|
+| 四個數字 | 已儲存詞數、累計複習次數、總正確率、現在到期數 |
+| 各級掌握度 | 每個 CEFR 等級一條長條：該級詞數 + 答對率；**沒練過的詞標 untested，不假裝成 0%** |
+| 近 30 天正確率 | 折線圖；**沒有複習的日子是斷點，不會被畫成 0%**；每個點 hover 看當日正確率與題數 |
+| Most missed | 常答錯的詞依錯誤次數排序，**點一列直接開啟該詞的編輯面板** |
 
 ### 2.5 Revision → Quiz（三選一測驗）
 
@@ -118,6 +130,19 @@ App 共**四個頁面**，由左至右依序為 **Discover → My Cards → Reco
 **間隔重複排程（v2.2）**：每筆記錄帶 `dueAt` / `ease` / `interval` 三欄（SM-2 輕量版）——答對把間隔乘上 ease（上限 180 天），答錯拉回隔天並調降 ease；到期日加 0–20% 抖動，避免同批存的詞擠在同一天到期。在 `My saved words` 範圍出題時**到期詞優先**（Data & settings 的 `Spaced repetition` 可關掉，關掉即回到純隨機加權）。舊版本的記錄不需遷移，啟動時依 `lastReviewedAt` 現場補齊欄位。
 
 **錯題本**：常答錯的詞自動進入 `My wrong list`（判定：錯誤次數 ≥ 1 且正確次數 ≤ 錯誤次數），答對數超過錯誤次數就自動畢業——不另存一份資料，全部由 `stats` 演生。
+
+**四種題型（v2.3）**：範圍下方有 segmented 控制列可切題型，選擇記在 `settings.quizMode`：
+
+| 題型 | 題幹 | 作答方式 |
+|---|---|---|
+| `Meaning`（預設） | 英文詞 + 音標 | 從 3 個**中文釋義**選 1（干擾項為易混淆近義） |
+| `Reverse` | **中文釋義**（藏起音標與英文字） | 從 3 個**英文字**選 1（干擾項為拼寫／字首字尾相近的詞） |
+| `Listen` | **只播發音**（🔊 可重播，進題自動播一次） | 從 3 個英文字選 1 |
+| `Spell` | 中文釋義 | **自己打字**，Enter 或 `Check` 送出；大小寫、空格、標點不算錯（`normText()` 比對）；拼錯從**第一個錯字**標紅並揭示正解 |
+
+- 片語與句式沒有可聽可拼的單字形態，**固定使用 Meaning 題型**（`buildQuestion()` 自動判斷）
+- 四種題型共用同一條作答路徑：統計、SRS 排程、每日目標、動畫與震動完全一致
+- 桌機快捷鍵：`1` `2` `3` 選項（Spell 模式無選項）、`Enter` 送出拼寫、`Enter` 或 `空白鍵` 下一題
 
 **出題方式**：一題一個詞，三個中文選項——1 個正解 ＋ 2 個**易混淆干擾項**。干擾項是刻意挑的：
 
@@ -210,9 +235,9 @@ Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmark
 
 ### 2.9 User guide（使用說明）
 
-**App info → User guide → Open the guide** 會彈出完整說明書，涵蓋十個主題：
+**App info → User guide → Open the guide** 會彈出完整說明書，涵蓋十一個主題：
 四個頁面、Discover 的看卡與發音、存檔手勢、Records 管理、Quiz、
-間隔重複與每日目標、外觀、資料與備份、更新、以及幾個小提示。
+間隔重複與每日目標、學習統計、外觀、資料與備份、更新、以及幾個小提示。
 
 說明書自己有語言切換（**繁體中文 / 简体中文**），跟「Definition in Chinese」是**兩個獨立設定**：
 你可以讓卡片用繁體、說明書看簡體。內文寫在 `build/guide.js`，只寫一份繁體，
@@ -313,7 +338,7 @@ Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmark
 
 ## 5. Android APK
 
-- **版本**：2.2（versionCode 13，minSdk 24 / targetSdk 35），約 3.0 MB，零額外依賴
+- **版本**：2.3（versionCode 14，minSdk 24 / targetSdk 35），約 3.0 MB，零額外依賴
 - **權限**：僅 `INTERNET`、`ACCESS_NETWORK_STATE`、`VIBRATE`
 - **安裝**：從 Releases 下載 APK → 允許安裝未知來源 → 完成
 - **升級**：直接安裝新版本即可覆蓋，記錄保留（見第 4 節）
@@ -377,7 +402,7 @@ Release 的資產檔名固定為 `LexiCards.apk`，App 的更新檢查就是抓�
 ```bash
 cd build
 python3 build.py      # 合併零件 → ../index.html，並檢查 JS 語法、HTML id 對照、重複宣告
-python3 smoke.py      # headless Chromium 跑 283 項功能測試（手勢、拖放、Quiz、SRS、API fallback、外觀），輸出截圖
+python3 smoke.py      # headless Chromium 跑 321 項功能測試（手勢、拖放、Quiz、SRS、題型、統計、外觀），輸出截圖
 python3 shots.py      # 產生 Records / Quiz 畫面截圖（/tmp/shot-*.png）
 python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始資料，見 6.3）
 ```
@@ -407,9 +432,10 @@ python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始�
 | `build/update.js` | App 內更新檢查（GitHub Release ＋ `version.json` 備援） |
 | `build/nav.js`、`build/init.js` | 頁籤導覽與啟動流程 |
 | `build/activity.js` | 每日活動計數（v2.2）：目標環、連續天數、近 7 天正確率 |
+| `build/stats.js` | 學習統計面板（v2.3）：總量、各級掌握度、30 天趨勢 SVG、常錯詞 |
 | `build/skin.js`、`build/skin_gothic.js`、`build/skin_primevere.js` | 外觀系統：`SKINS` 設定表、套用 / 清除、選擇器；各款的圖像（base64） |
 | `build/skins/gothic/`、`build/skins/primevere/` | 各款素材：原圖 / `out/` 成品、`make.py` 生成腳本（同時產出 Android 資源） |
-| `build/smoke*.py`／`build/smoke_*.js` | 283 項功能測試 |
+| `build/smoke*.py`／`build/smoke_*.js` | 321 項功能測試 |
 | `build/shots.py` | 畫面截圖腳本 |
 | `build/make_data.py` | 內建詞彙表的資料管線 |
 | `version.json` | 目前版本與 APK 下載網址（更新檢查的備援來源） |
@@ -507,6 +533,34 @@ https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v1.7/LexiCards.apk
 ---
 
 ## 9. 修訂紀錄
+
+### v2.3
+
+| # | 做了什麼 | 原因 |
+|---|---|---|
+| 1 | **四種題型**：`Meaning`（原題型）／`Reverse`（中文選英字，干擾項為拼寫相近的**英文字**）／`Listen`（只播發音、可重播）／`Spell`（打字作答，大小寫空格標點皆以 `normText()` 比對，拼錯從第一個錯字標紅）。範圍下方加 segmented 控制列，選擇記在 `settings.quizMode`。四型共用同一條 `answerQuiz()` 路徑，統計、SRS、每日目標、動畫與震動完全不變 | Quiz 原本只有被動辨識；回憶產出（拼寫）與聽覺辨識（聽力）才是會用到詞的地方。四型共用一條作答路徑，新題型不會讓統計或排程分叉 |
+| 2 | **片語與句式自動退回選擇題**：`buildQuestion()` 依 `item.type` 判斷——沒有單字形態可聽可拼的詞一律用 `Meaning`，不會出現「請聽一個片語」 | 片語/句式被抽中時若硬套新題型只會出題不來 |
+| 3 | **學習統計面板**：Records 工具列新增 📊，開啟全螢幕 sheet——四個總量（已存／複習次數／正確率／到期數）、各 CEFR 等級掌握度長條、近 30 天正確率折線（純 SVG）、Most missed 清單（點一列直接開該詞編輯面板）。資料全部由 `stats` + 每日活動推導，**沒複習的日子是折線斷點而不是 0%**，沒練過的等級標 `untested` | per-word stats 一直在收卻沒有任何總覽；使用者無法回答「我到底記住多少」 |
+| 4 | **說明書與 README 同步**：Quiz 一節改為四種題型並新增「學習統計」一節（十個主題變十一個），README §2.4.1、§2.5、§5、§6 同步更新 | 文件與功能不同步就是謊言 |
+
+> 測試：headless Chromium 功能測試由 **283 項增加到 321 項**。新增的 38 項釘住：
+> Reverse 的題幹是中文、音標被藏起、三個英文字選項恰有一個正解且點擊作答照常計分；
+> Listen 的詞不顯示、進題自動發音一次、喇叭可重播；
+> Spell 顯示中文、選項為空、空白輸入被拒、全大寫＋前後空白仍算對、答後輸入框鎖住、
+> 近錯時回饋為 revealed 且標出第一個錯字；
+> 片語退回選擇題、未知題型退回 meaning、`spellDiffHTML()` 的標記位置；
+> 統計面板的按鈕與 sheet、四個數字與 records 一致、等級列加總等於記錄數、
+> 掌握度長條數與列數相等、折線 `d` 以 `M` 開頭且含 `L`、30 天序列以今天收尾、
+> Most missed 由多到少且可點進編輯面板、空白帳號三處都顯示說明文字。
+
+> 另外修了兩件測試抓到的事：
+> ① **拼錯反而記成答對**——`submitSpelling()` 原本在拼錯時送出「正解」那一格，
+> `answerQuiz()` 自然判成對；改成永遠提交「你打的那格」，正確與否由該格自己的旗標決定。
+> ② **headless 版面巡檢被聽力題干擾**——版面那段巡檢是非同步 IIFE 沒被 await，
+> 與第 19 節並行；聽力題的 `new Audio()` 會發真實網路請求（`fetch` stub 攔不到），
+> 在 virtual time 下卡住 frame clock，讓巡檢量到半轉場的 track。
+> 修法兩管齊下：測試環境把 `window.Audio` 換成拒絕播放的 no-op（聽音測試改用 `speakTerm` stub），
+> 並讓版面巡檢被 `await`——這兩個修正都讓測試回到「離線、決定性」的原本約定。
 
 ### v2.2
 

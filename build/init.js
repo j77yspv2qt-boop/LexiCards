@@ -37,6 +37,7 @@ function init() {
   initDataSheet();
   initInfoSheet();
   initQuiz();
+  initStats();
   initGlobalGuards();
 
   setEntryType('word');

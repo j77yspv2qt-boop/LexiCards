@@ -58,14 +58,29 @@ const GUIDE_SECTIONS = [
     ]
   },
   {
-    h: 'Quiz：三選一測驗',
+    h: 'Quiz：四種題型（三選一測驗）',
     ul: [
       '上方選範圍：My saved words、Due today（今天到期）、My wrong list，或任一 CEFR 等級（會從內建詞庫出題）',
+      '範圍下方可切題型：Meaning（看英字選中文）、Reverse（看中文選英字）、' +
+        'Listen（只播發音、可重播）、Spell（自己打字拼出來，按 Enter 或 Check）',
+      'Reverse 與 Listen 的選項是外形相近的英文字（拼寫接近、共用字首字尾）；' +
+        'Spell 的大小寫與空格不算錯，拼錯會從第一個錯字標起',
+      '片語與句式沒有可聽可拼的單字形態，固定用 Meaning 題型',
       '想讓干擾選項更難：Data & settings → Tricky Quiz options',
       '答對／答錯都有動畫與震動；答完可按 Next，或把這題 Add to Records',
       'Skip 跳過這題、Reset round 重新開始這一回合',
       '下方統計：Round、Correct、Missed、Streak、Accuracy；' +
         'Missed in this round 會列出這回合答錯的詞'
+    ]
+  },
+  {
+    h: '學習統計（Your progress）',
+    p: ['Records 工具列的 📊 按鈕開啟統計面板（App 內、使用說明之外）：'],
+    ul: [
+      '四個數字：已儲存詞數、累計複習次數、總正確率、現在到期數',
+      '各 CEFR 等級的掌握度長條：該級有多少詞、答對率幾成；沒練過的詞不會假裝成 0%',
+      '近 30 天每日正確率折線（純 SVG 畫的）：沒有複習的日子是斷點，不會被畫成 0%',
+      'Most missed：常答錯的詞依錯誤次數排序，點一列直接開該詞的編輯面板'
     ]
   },
   {

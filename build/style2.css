@@ -92,6 +92,43 @@ body[data-revsub="records"] .fab{display:grid}
 .stat__k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
 .quiz__wronglist{margin-top:14px}
 
+/* ---------- question types (v2.3) ---------- */
+.quiz__modes{margin:8px 0 10px;padding:3px}
+.quiz__modes .seg{font-size:12.5px;padding:7px 4px}
+.quiz__term--zh{font-size:21px;line-height:1.45}
+.quiz__speak{display:flex;flex-direction:column;align-items:center;gap:4px;margin:4px auto 0;padding:13px 22px;
+  border-radius:var(--radius-sm);background:var(--accent-soft);color:var(--primary-dark);
+  font-weight:700;font-size:13px}
+.quiz__speak:active{transform:translateY(1px)}
+.quiz__speak.is-speaking{box-shadow:inset 0 0 0 2px var(--primary)}
+.quiz__speakicon{font-size:28px;line-height:1}
+.quiz__spell{display:flex;gap:8px;margin-top:2px}
+.quiz__spell .input{flex:1}
+.spell-diffline{margin-top:10px;font-size:14px;color:var(--muted);word-break:break-word}
+.spell-diff{background:var(--danger-soft);color:var(--danger-dark);border-radius:4px;padding:0 2px;font-weight:700}
+.spell-difflabel{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+
+/* ---------- learning statistics sheet (v2.3) ---------- */
+.statgrid{display:flex;gap:8px;margin:0 0 4px}
+.stats__h{font-size:12px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin:20px 0 9px}
+.stats__row{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13.5px}
+.stats__lv{width:22px;flex:none;font-weight:800;color:var(--primary-dark)}
+.stats__bar{flex:1;height:8px;border-radius:var(--pill);background:var(--accent-soft);overflow:hidden}
+.stats__fill{display:block;height:100%;border-radius:var(--pill);background:var(--primary)}
+.stats__num{width:128px;flex:none;text-align:right;color:var(--muted);font-size:12px}
+.stats__svg{width:100%;height:96px;display:block}
+.stats__line{fill:none;stroke:var(--primary);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.stats__area{fill:var(--accent-soft);stroke:none}
+.stats__dot{fill:var(--primary)}
+.stats__axis{stroke:var(--line);stroke-width:1}
+.stats__axislabels{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:5px}
+.stats__word{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;
+  padding:10px 12px;margin:6px 0;border-radius:var(--radius-sm);border:1px solid var(--line);
+  background:var(--surface);font-size:14.5px}
+.stats__term{font-weight:700}
+.stats__meta{color:var(--muted);font-size:12px;white-space:nowrap}
+.stats__empty{font-size:13.5px;color:var(--muted);margin:8px 0}
+
 /* ---------- daily goal card (v2.2) ---------- */
 .dailycard{display:flex;gap:14px;align-items:center;padding:14px;margin:0 0 10px;
   border-radius:var(--radius);background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow)}

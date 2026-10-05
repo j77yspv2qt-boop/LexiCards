@@ -581,8 +581,10 @@
        only proves something on page one, where every formula returns 0% - so
        here every page is walked and its real box is compared with the pager.
        A track offset expressed in the wrong unit still reads as a valid
-       transform and passes a string match, but parks the page off screen. */
-    (async function () {
+       transform and passes a string match, but parks the page off screen.
+       Awaited on purpose: this walk must finish before the next section starts
+       anything that moves the track under it. */
+    await (async function () {
       var pagerL = document.getElementById('pager').getBoundingClientRect().left;
       for (var _i = 0; _i < 4; _i++) {
         var id = ['discover', 'mine', 'records', 'quiz'][_i];
@@ -1361,6 +1363,214 @@
     } else {
       step('daily: an answered question feeds the ring', false, 'no question');
     }
+
+    /* ---- 19. v2.3: question types ---- */
+    setQuizScope('records');
+    setQuizMode('meaning');
+    await wait(140);
+    step('mode: the default question type is the meaning one',
+      quizMode() === 'meaning', quizMode());
+    step('mode: the switch offers all four types',
+      document.querySelectorAll('#quizModeSeg .seg').length === 4 &&
+      QUIZ_MODES.join(',') === 'meaning,spell,listen,reverse');
+
+    /* reverse: the Chinese goes in, the English comes out */
+    setQuizMode('reverse');
+    await wait(160);
+    var rq = state.round.current;
+    step('mode: reverse asks for the word',
+      !!rq && rq.mode === 'reverse' &&
+      document.getElementById('quizAsk').textContent === 'Which word is this?',
+      document.getElementById('quizAsk').textContent);
+    step('mode: reverse shows the gloss, not the word',
+      !!rq && document.getElementById('quizTerm').textContent === rq.zh[0] &&
+      document.getElementById('quizTerm').hidden === false);
+    step('mode: reverse hides the phonetic so it cannot spell the word out',
+      document.getElementById('quizPhon').hidden === true);
+    step('mode: reverse offers three English words with one right answer', (function () {
+      if (!rq || rq.options.length !== QUIZ_OPTIONS) return false;
+      var right = rq.options.filter(function (o) { return o.correct; });
+      return right.length === 1 && right[0].text === rq.term &&
+        rq.options.every(function (o) { return /^[A-Za-z]/.test(o.text); });
+    })(), rq ? rq.options.map(function (o) { return o.text; }).join(' | ') : 'no question');
+    step('mode: reverse lights up its own segment',
+      document.querySelector('#quizModeSeg .seg[data-mode="reverse"]').classList.contains('is-active'));
+    var rqRight = -1;
+    for (var ri = 0; rq && ri < rq.options.length; ri++) if (rq.options[ri].correct) rqRight = ri;
+    if (rqRight >= 0) {
+      document.querySelectorAll('#quizOptions .qopt')[rqRight].click();
+      step('mode: a right answer in reverse counts like any other',
+        document.getElementById('quizFeedback').textContent === 'Correct' &&
+        state.round.correct === 1, document.getElementById('quizFeedback').textContent);
+    } else {
+      step('mode: a right answer in reverse counts like any other', false, 'no correct option');
+    }
+/* listen: the ear does the work */
+    window.__spoke = [];
+    var realSpeak = speakTerm;
+    speakTerm = function (t) { window.__spoke.push(t); };
+    setQuizMode('listen');
+    await wait(240);
+    var lq = state.round.current;
+    step('mode: listen plays the word without showing it',
+      !!lq && lq.mode === 'listen' &&
+      document.getElementById('quizTerm').hidden === true &&
+      document.getElementById('btnQuizSpeak').hidden === false,
+      lq ? lq.term : 'no question');
+    step('mode: listen speaks the term when the question appears',
+      window.__spoke.length > 0 && window.__spoke[window.__spoke.length - 1] === lq.term,
+      window.__spoke.join(','));
+    document.getElementById('btnQuizSpeak').click();
+    step('mode: the speaker button replays on demand', window.__spoke.length >= 2,
+      window.__spoke.length + ' plays');
+    step('mode: listen offers three English words, one right',
+      !!lq && lq.options.length === QUIZ_OPTIONS &&
+      lq.options.filter(function (o) { return o.correct; }).length === 1 &&
+      lq.options.filter(function (o) { return o.correct; })[0].text === lq.term);
+    step('mode: listen asks the listening question',
+      document.getElementById('quizAsk').textContent === 'Listen and choose the word');
+    speakTerm = realSpeak;
+
+    /* spell: type it out */
+    setQuizMode('spell');
+    await wait(160);
+    var sq = state.round.current;
+    step('mode: spell asks for typing',
+      !!sq && sq.mode === 'spell' &&
+      document.getElementById('quizSpellWrap').hidden === false &&
+      document.getElementById('quizOptions').hidden === true,
+      document.getElementById('quizAsk').textContent);
+    step('mode: spell shows the gloss and keeps the word hidden',
+      !!sq && document.getElementById('quizTerm').textContent === sq.zh[0] &&
+      document.getElementById('quizPhon').hidden === true);
+    step('mode: spell carries no options of its own',
+      !!sq && sq.options.length === 0, sq ? sq.options.length : -1);
+    var spellInput = document.getElementById('quizSpell');
+    spellInput.value = '   ';
+    step('mode: an empty spelling is refused', submitSpelling() === false && state.round.answered !== true);
+    spellInput.value = '  ' + sq.term.toUpperCase() + '  ';
+    step('mode: typing the word in any case counts as correct',
+      submitSpelling() === true && state.round.answered === true &&
+      document.getElementById('quizFeedback').textContent === 'Correct',
+      document.getElementById('quizFeedback').textContent);
+    step('mode: the input locks once answered', spellInput.disabled === true);
+    nextCard();
+    await wait(140);
+    var sq2 = state.round.current;
+    if (sq2 && sq2.mode === 'spell') {
+      document.getElementById('quizSpell').value =
+        sq2.term.slice(0, Math.max(2, sq2.term.length - 1)) + 'z';
+      var spellBad = submitSpelling();
+      step('mode: a near miss is marked from the first wrong character',
+        spellBad === true && state.round.wrong >= 1 &&
+        document.getElementById('quizFeedback').textContent.indexOf('revealed') >= 0 &&
+        !!document.querySelector('#quizAnswer .spell-diff'),
+        document.getElementById('quizFeedback').textContent);
+    } else {
+      step('mode: a near miss is marked from the first wrong character', false,
+        'second question was ' + (sq2 ? sq2.mode : 'none'));
+    }
+    step('mode: the chosen type is remembered',
+      state.settings.quizMode === 'spell' &&
+      JSON.parse(localStorage.getItem('lexi.settings.v1')).quizMode === 'spell',
+      state.settings.quizMode);
+    step('mode: a phrase keeps the choice question (nothing to type or hear)',
+      (function () {
+        var pq = buildQuestion({ term: 'give up the ghost', type: 'phrase', zh: ['\u653e\u68c4'],
+          level: '', record: null });
+        return !!pq && pq.mode === 'meaning' && pq.options.length === QUIZ_OPTIONS;
+      })());
+    step('mode: an unknown type falls back to the meaning question', (function () {
+      state.settings.quizMode = 'nonsense';
+      return quizMode() === 'meaning';
+    })());
+    step('mode: the diff helper marks the first wrong character',
+      spellDiffHTML('resiliant', 'resilient').indexOf('>ant</span>') > 0 &&
+      spellDiffHTML('resiliant', 'resilient').indexOf('resili') === 0,
+      spellDiffHTML('resiliant', 'resilient'));
+/* ---- 19b. v2.3: the statistics sheet ---- */
+    setQuizMode('meaning');
+    await wait(140);
+    step('stats: Records offers the statistics button', !!document.getElementById('btnStats'));
+    document.getElementById('btnStats').click();
+    await wait(120);
+    var statsSheet = document.getElementById('sheetStats');
+    step('stats: the button opens the sheet', statsSheet.classList.contains('is-open'));
+    step('stats: four summary tiles are rendered',
+      document.querySelectorAll('#statsOverview .stat').length === 4);
+    var totals = statsTotals();
+    step('stats: the saved tile matches the records',
+      document.querySelector('#statsOverview .stat__v').textContent === String(totals.saved),
+      totals.saved + ' records');
+    step('stats: totals add up to the per-word stats', (function () {
+      var seen = 0;
+      state.records.forEach(function (r) { seen += (r.stats && r.stats.seen) || 0; });
+      return seen === totals.seen && (totals.accuracy === null || (totals.accuracy >= 0 && totals.accuracy <= 100));
+    })(), totals.seen + ' reviews, ' + totals.accuracy + '%');
+    step('stats: the level rows add up to the records', (function () {
+      var rows = statsLevelRows();
+      var sum = rows.reduce(function (a, r) { return a + r.words; }, 0);
+      return sum === state.records.length && rows.length >= 1;
+    })(), statsLevelRows().length + ' rows');
+    step('stats: a mastery bar is drawn for every level row',
+      document.querySelectorAll('#statsLevels .stats__row').length >= 1 &&
+      document.querySelectorAll('#statsLevels .stats__fill').length ===
+      document.querySelectorAll('#statsLevels .stats__row').length);
+    step('stats: the trend is an SVG with a real path', (function () {
+      var line = document.querySelector('#statsTrend .stats__line');
+      if (!line) return false;
+      var d = line.getAttribute('d') || '';
+      return d.indexOf('M') === 0 && d.length > 4 && d.indexOf('L') > 0;
+    })(), (function () {
+      var line = document.querySelector('#statsTrend .stats__line');
+      return line ? (line.getAttribute('d') || '').slice(0, 28) : 'no path';
+    })());
+    step('stats: the series is 30 local days ending today', (function () {
+      var series = statsSeries(30);
+      return series.length === 30 && series[29].date === dayKey() &&
+        series.every(function (p) { return typeof p.reviewed === 'number'; });
+    })(), statsSeries(30).length + ' days');
+    step('stats: missed words are listed worst first', (function () {
+      var rows = document.querySelectorAll('#statsTop .stats__word');
+      var top = statsTopMissed(10);
+      if (!top.length) return rows.length === 0;
+      if (rows.length !== top.length) return false;
+      for (var i = 0; i < top.length; i++) {
+        if (rows[i].getAttribute('data-id') !== top[i].id) return false;
+        if (i > 0 && top[i - 1].stats.wrong < top[i].stats.wrong) return false;
+      }
+      return true;
+    })(), document.querySelectorAll('#statsTop .stats__word').length + ' rows');
+    step('stats: a missed word opens its own entry sheet', (function () {
+      var row = document.querySelector('#statsTop .stats__word');
+      if (!row) return true;
+      row.click();
+      var ok = document.getElementById('sheetEntry').classList.contains('is-open') &&
+        !document.getElementById('sheetStats').classList.contains('is-open');
+      closeSheet('sheetEntry');
+      return ok;
+    })());
+    step('stats: an empty account explains itself instead of drawing zeros',
+      (function () {
+        var keepRecords = state.records, keepActivity = state.activity;
+        state.records = [];
+        state.activity = {};
+        renderStats();
+        var ok = !!document.querySelector('#statsLevels .stats__empty') &&
+          !!document.querySelector('#statsTrend .stats__empty') &&
+          !!document.querySelector('#statsTop .stats__empty');
+        state.records = keepRecords;
+        state.activity = keepActivity;
+        renderStats();
+        return ok;
+      })());
+    step('stats: the sheet closes again', (function () {
+      openStats();
+      closeSheet('sheetStats');
+      return !document.getElementById('sheetStats').classList.contains('is-open');
+    })());
+    step('stats: records survive the visit untouched', state.records.length === totals.saved,
+      state.records.length + ' records');
   } catch (err) {
     R.ok = false;
     R.steps.push({ name: 'exception thrown', pass: false, info: String((err && err.stack) || err).slice(0, 400) });

@@ -107,21 +107,87 @@ function pickWeighted(pool) {
   return candidates[candidates.length - 1];
 }
 
-/* one question = the term plus QUIZ_OPTIONS Chinese meanings, exactly one of
-   which is right, in random order */
+/* ------------------------------- question types -------------------------------
+   'meaning' is the original three-Chinese-choices question.  The other three
+   turn it into production instead of recognition: 'reverse' shows the Chinese
+   and asks for the word, 'listen' only plays the audio, and 'spell' makes the
+   learner type it.  All four share buildQuestion / answerQuiz - only what the
+   prompt shows and what the options contain changes. */
+const QUIZ_MODES = ['meaning', 'spell', 'listen', 'reverse'];
+
+function quizMode() {
+  const m = state.settings.quizMode || 'meaning';
+  return QUIZ_MODES.indexOf(m) >= 0 ? m : 'meaning';
+}
+
+/* Word options for the reverse / listening modes: the term plus two look-alike
+   words, scored with the same confusion metric the Chinese distractors use
+   (edit distance, shared prefix, shared gloss characters). */
+function pickWordOptions(item) {
+  const key = normKey(item.term);
+  const pool = distractorPool(item);
+  const scored = [];
+  for (let i = 0; i < pool.length; i++) {
+    const c = pool[i];
+    if (!c || !c.term || normKey(c.term) === key) continue;
+    scored.push({ term: c.term, s: confusionScore(item.term, glossText(item), c.term, glossText(c)) });
+  }
+  if (!scored.length) return null;
+  let candidates = scored;
+  if (state.settings.quizTricky) {
+    scored.sort((x, y) => y.s - x.s);
+    candidates = scored.slice(0, Math.min(scored.length, QUIZ_OPTIONS * 8));
+  }
+  const picked = [];
+  const used = Object.create(null);
+  used[key] = true;
+  const bag = shuffle(candidates);
+  for (let i = 0; i < bag.length && picked.length < QUIZ_OPTIONS - 1; i++) {
+    const k = normKey(bag[i].term);
+    if (used[k]) continue;
+    used[k] = true;
+    picked.push({ text: bag[i].term, correct: false });
+  }
+  if (picked.length < QUIZ_OPTIONS - 1) return null;
+  return shuffle([{ text: item.term, correct: true }].concat(picked));
+}
+
+/* one question = the term plus QUIZ_OPTIONS answers, exactly one of which is
+   right, in random order */
 function buildQuestion(item) {
   const correct = glossText(item);
   if (!correct) return null;
-  const wrongs = pickDistractors(item, distractorPool(item), QUIZ_OPTIONS - 1);
-  if (wrongs.length < QUIZ_OPTIONS - 1) return null;
-  const options = [{ text: correct, correct: true }]
-    .concat(wrongs.map(w => ({ text: w.text, correct: false })));
+  const type = item.type || 'word';
+  /* a phrase or a sentence pattern cannot be spelled out or heard as a word */
+  const mode = type === 'word' ? quizMode() : 'meaning';
+  let options = null;
+  if (mode === 'meaning') {
+    const wrongs = pickDistractors(item, distractorPool(item), QUIZ_OPTIONS - 1);
+    if (wrongs.length < QUIZ_OPTIONS - 1) return null;
+    options = shuffle([{ text: correct, correct: true }]
+      .concat(wrongs.map(w => ({ text: w.text, correct: false }))));
+  } else if (mode === 'reverse' || mode === 'listen') {
+    options = pickWordOptions(item);
+    if (!options) return null;              /* nextQuestion() retries, then shows the empty state */
+  }
   const q = {
-    term: item.term, type: item.type || 'word', level: item.level || '',
+    term: item.term, type: type, level: item.level || '', mode: mode,
     zh: item.zh || [], phonetic: item.phonetic || '', example: item.example || '',
-    record: item.record || null, options: shuffle(options), picked: -1
+    record: item.record || null, options: options || [], picked: -1, typed: ''
   };
   return q;
+}
+
+/* marks from the first differing character on, so a near miss shows where it
+   went wrong without spelling the whole word out */
+function spellDiffHTML(typed, term) {
+  const a = String(typed || '').trim(), b = String(term || '');
+  if (!a.length || !b.length) return '';
+  let i = 0;
+  while (i < a.length && i < b.length && a.charAt(i) === b.charAt(i)) i++;
+  const rest = a.slice(i) || b.slice(i);
+  return escapeHTML(a.slice(0, i)) + '<span class="spell-diff">' + escapeHTML(rest) + '</span>' +
+    (a.slice(i) ? ' &rarr; ' + escapeHTML(b) : '');
 }
 
 function nextQuestion() {

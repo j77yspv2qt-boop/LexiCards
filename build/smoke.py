@@ -93,6 +93,17 @@ window.fetch = function (url, opts) {
   }
   return window.__realFetch ? window.__realFetch(u, opts) : Promise.reject(new Error('blocked'));
 };
+
+/* Speak must not reach the network either.  speakTerm() plays its audio with
+   new Audio(), which does not go through fetch - the stub above never sees it,
+   and a real request to dict.youdao.com stalls the renderer's frame clock,
+   which shows up as half-finished page transitions in the layout checks.
+   A no-op Audio keeps the fallback chain deterministic and offline. */
+window.Audio = function () {
+  this.play = function () { return Promise.reject(new Error('no audio in the harness')); };
+  this.pause = function () {};
+  this.currentTime = 0;
+};
 </script>
 """
 

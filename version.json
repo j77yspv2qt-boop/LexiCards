@@ -1,10 +1,10 @@
 {
-  "version": "2.2",
+  "version": "2.3",
   "released": "2026-10-05",
   "apk": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest/download/LexiCards.apk",
-  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.2/LexiCards.apk",
+  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.3/LexiCards.apk",
   "page": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest",
   "mirror_page": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@main/",
-  "notes": "Spaced repetition: every saved word now carries a next-review date (SM-2 style - right answers stretch the interval up to half a year, a miss brings it back to tomorrow), the Quiz asks due words first, Records gains a Due today sort and marker, and the quiz range gains Due today and My wrong list scopes. The Quiz page opens with a summary card: daily-goal ring, day streak, due count, 7-day accuracy and a one-tap start. Goal and the new switch live in Data & settings."
+  "notes": "Quiz question types (v2.3): besides the three-choice meaning question you can now answer in reverse (Chinese to word, with look-alike word distractors), listen (the word is only spoken, with replay) or spell (type the word; case and spaces do not matter and a near miss is marked from the first wrong character). Phrases and sentence patterns keep the choice question. Records gains a statistics sheet: saved/reviewed/accuracy/due tiles, mastery per CEFR level, a 30-day accuracy line drawn as pure SVG (days with no reviews are gaps, not zeros) and the most-missed words, each one opening its entry."
 }
 

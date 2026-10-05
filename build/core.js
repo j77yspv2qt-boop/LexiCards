@@ -19,7 +19,7 @@ const LS_KEYS = {
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */
@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS = {
   autoNextDelayMs: 850,
   strictQuiz: false,
   quizScope: 'records',            /* what the Quiz draws questions from */
+  quizMode: 'meaning',             /* meaning | spell | listen | reverse (v2.3) */
   quizTricky: true,                /* build the wrong options from confusable words */
   srsEnabled: true,                /* quiz due words first (spaced repetition) */
   dailyGoal: 20,                   /* questions per day shown on the Quiz ring */

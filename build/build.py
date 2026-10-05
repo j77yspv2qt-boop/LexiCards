@@ -16,6 +16,7 @@ JS = ["core.js", "core2.js",
       "api.js", "api2.js",
       "cards.js", "cards2.js", "gesture.js", "gesture2.js", "dict.js",
       "records.js", "entry.js", "data.js", "guide.js", "quiz.js", "quiz2.js", "activity.js",
+      "stats.js",
       "skin_gothic.js", "skin_primevere.js", "skin.js", "nav.js", "native.js",
       "update.js", "init.js"]
 

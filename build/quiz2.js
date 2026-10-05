@@ -17,7 +17,16 @@ function flash(el, cls) {
   el.classList.add(cls);
 }
 
+/* what the prompt asks, per question type */
+const QUIZ_ASK = {
+  meaning: 'Which one is the meaning?',
+  reverse: 'Which word is this?',
+  listen : 'Listen and choose the word',
+  spell  : 'Type the English word'
+};
+
 function paintQuestion(q) {
+  const mode = q.mode || 'meaning';
   const chip = $('#quizType');
   if (chip) {
     chip.className = 'chip chip--' + (q.type || 'word');
@@ -28,14 +37,32 @@ function paintQuestion(q) {
     lvl.hidden = !q.level;
     lvl.textContent = q.level || '';
   }
-  setText('#quizTerm', q.term);
-  setText('#quizPhon', q.phonetic || '');
+  /* 'listen' shows no written word at all - the ear does the work */
+  const isZh = mode === 'reverse' || mode === 'spell';
+  setText('#quizTerm', isZh ? (q.zh[0] || '') : q.term);
+  const termEl = $('#quizTerm');
+  if (termEl) {
+    termEl.hidden = mode === 'listen';
+    termEl.className = 'quiz__term' + (isZh ? ' quiz__term--zh' : '');
+  }
+  /* the phonetic would spell the word out - only the meaning mode may show it */
+  setText('#quizPhon', mode === 'meaning' ? (q.phonetic || '') : '');
+  const phonEl = $('#quizPhon');
+  if (phonEl) phonEl.hidden = mode !== 'meaning';
 
+  const speakBtn = $('#btnQuizSpeak');
+  if (speakBtn) speakBtn.hidden = mode !== 'listen';
+  const spellWrap = $('#quizSpellWrap');
+  if (spellWrap) spellWrap.hidden = mode !== 'spell';
+  const input = $('#quizSpell');
+  if (input) { input.value = ''; input.disabled = false; }
+
+  setText('#quizAsk', QUIZ_ASK[mode] || QUIZ_ASK.meaning);
   const box = $('#quizOptions');
   if (box) {
-    box.hidden = false;
+    box.hidden = mode === 'spell';
     box.className = 'quiz__options';
-    box.innerHTML = q.options.map(quizOptionHTML).join('');
+    if (mode !== 'spell') box.innerHTML = q.options.map(quizOptionHTML).join('');
   }
   const prompt = $('#quizPrompt');
   if (prompt) prompt.className = 'quiz__prompt';
@@ -53,8 +80,28 @@ function paintQuestion(q) {
     add.textContent = known ? '\u2713 In Records' : '+ Add to Records';
     add.classList.toggle('is-done', known);
   }
+  if (mode === 'listen') setTimeout(() => speakTerm(q.term, q.audio || ''), 120);
   updateQuizStats();
   updatePoolInfo();
+}
+
+/* typing mode: the typed word becomes the picked option and the real word the
+   other one, so the single answer path still owns the round, the stats, the
+   feedback and the activity counters */
+function submitSpelling() {
+  const q = state.round && state.round.current;
+  if (!q || state.round.answered || (q.mode || 'meaning') !== 'spell') return false;
+  const input = $('#quizSpell');
+  if (!input) return false;
+  const typed = String(input.value || '');
+  if (!normText(typed)) { showToast('Type the word first', 'warn', 1600); return false; }
+  const ok = normText(typed) === normText(q.term);
+  q.typed = typed;
+  /* option 0 is always what the learner typed - its own correct flag decides
+     the outcome; option 1 just carries the real word for the reveal */
+  q.options = [{ text: typed, correct: ok }, { text: q.term, correct: !ok }];
+  answerQuiz(0);
+  return true;
 }
 
 /* Pull a question and put it on screen. */
@@ -176,6 +223,7 @@ function answerQuiz(index) {
   state.round.answered = true;
   q.picked = index;
   const ok = !!chosen.correct;
+  const mode = q.mode || 'meaning';
 
   const box = $('#quizOptions');
   if (box) {
@@ -185,6 +233,8 @@ function answerQuiz(index) {
       else if (i === index) el.classList.add('is-wrong');
     });
   }
+  const input = $('#quizSpell');
+  if (input) input.disabled = true;
 
   state.round.total++;
   if (ok) {
@@ -201,8 +251,23 @@ function answerQuiz(index) {
     flash($('#quizPrompt'), 'is-wrong');
     vibrate(HAPTIC.wrong);                        /* two light pulses */
     const fb = $('#quizFeedback');
-    if (fb) { fb.className = 'quiz__feedback no'; fb.textContent = 'Not quite - the right meaning is highlighted'; }
+    if (fb) {
+      fb.className = 'quiz__feedback no';
+      fb.textContent = mode === 'spell' ? 'Not quite - the word is revealed below'
+        : mode === 'meaning' ? 'Not quite - the right meaning is highlighted'
+        : 'Not quite - the right word is highlighted';
+    }
     renderAnswerPanel(q);
+    /* a typed near miss gets its first wrong character marked */
+    if (mode === 'spell' && q.typed) {
+      const host = $('#quizAnswer');
+      if (host && !host.querySelector('.spell-diffline')) {
+        const line = document.createElement('div');
+        line.className = 'spell-diffline';
+        line.innerHTML = '<span class="spell-difflabel">You typed</span>' + spellDiffHTML(q.typed, q.term);
+        host.appendChild(line);
+      }
+    }
   }
   touchStats(q.record, ok);
   recordActivity(ok);
@@ -270,6 +335,19 @@ function setQuizScope(scope) {
   renderQuestion();
 }
 
+/* switch question type: a new round, same scope, and the segmented control
+   follows along with the saved setting */
+function setQuizMode(mode) {
+  if (QUIZ_MODES.indexOf(mode) < 0) mode = 'meaning';
+  state.settings.quizMode = mode;
+  saveSettings();
+  $$('#quizModeSeg .seg').forEach(b => b.classList.toggle('is-active', b.dataset.mode === mode));
+  clearRoundTimer();
+  state.round = newRound();
+  renderWrongList();
+  renderQuestion();
+}
+
 /* kept for refreshRecords() - show or hide the Quiz surfaces */
 function refreshQuizState() {
   const pane = $('#quizPane');
@@ -310,6 +388,28 @@ function initQuiz() {
   /* summary card: jump straight into the due queue */
   const start = $('#btnStartDue');
   if (start) start.addEventListener('click', () => setQuizScope('due'));
+
+  /* question type switch (v2.3) */
+  $$('#quizModeSeg .seg').forEach(b => {
+    b.classList.toggle('is-active', b.dataset.mode === quizMode());
+    b.addEventListener('click', () => setQuizMode(b.dataset.mode));
+  });
+
+  /* typing mode: Enter or the Check button submits, the microphone icon replays */
+  const spellInput = $('#quizSpell');
+  if (spellInput) spellInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); submitSpelling(); }
+  });
+  const spellBtn = $('#btnQuizSpell');
+  if (spellBtn) spellBtn.addEventListener('click', submitSpelling);
+  const speakBtn = $('#btnQuizSpeak');
+  if (speakBtn) speakBtn.addEventListener('click', () => {
+    const q = state.round && state.round.current;
+    if (!q || (q.mode || 'meaning') !== 'listen') return;
+    speakTerm(q.term, q.audio || '');
+    speakBtn.classList.add('is-speaking');
+    setTimeout(() => speakBtn.classList.remove('is-speaking'), 800);
+  });
 
   /* desktop: 1 / 2 / 3 pick an option, Enter or Space moves on */
   document.addEventListener('keydown', e => {

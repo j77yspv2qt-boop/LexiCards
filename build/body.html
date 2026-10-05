@@ -105,6 +105,7 @@
           <option value="seen">Most reviewed</option>
           <option value="due">Due today</option>
         </select>
+        <button type="button" class="iconbtn" id="btnStats" aria-label="Learning statistics" title="Learning statistics">&#128202;</button>
         <button type="button" class="iconbtn" id="btnData" aria-label="Data and settings">&#8943;</button>
       </div>
 
@@ -153,14 +154,28 @@
           </select>
           <span class="count count--inline" id="quizPoolInfo"></span>
         </div>
+        <div class="segmented segmented--sm quiz__modes" id="quizModeSeg" role="tablist" aria-label="Question type">
+          <button type="button" class="seg is-active" data-mode="meaning" role="tab">Meaning</button>
+          <button type="button" class="seg" data-mode="spell" role="tab">Spell</button>
+          <button type="button" class="seg" data-mode="listen" role="tab">Listen</button>
+          <button type="button" class="seg" data-mode="reverse" role="tab">Reverse</button>
+        </div>
         <div class="quiz__prompt" id="quizPrompt">
           <span class="chip chip--word" id="quizType">Word</span>
           <span class="chip chip--src" id="quizLevel" hidden></span>
           <div class="quiz__term" id="quizTerm">&mdash;</div>
           <div class="quiz__phon" id="quizPhon"></div>
+          <button type="button" class="quiz__speak" id="btnQuizSpeak" hidden aria-label="Play pronunciation">
+            <span class="quiz__speakicon" aria-hidden="true">&#128266;</span>
+            <span>Tap to hear it</span>
+          </button>
         </div>
         <div class="quiz__ask" id="quizAsk">Which one is the meaning?</div>
         <div class="quiz__options" id="quizOptions" role="group" aria-label="Meaning options"></div>
+        <div class="quiz__spell" id="quizSpellWrap" hidden>
+          <input type="text" class="input" id="quizSpell" placeholder="Type the English word..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+          <button type="button" class="btn btn--primary btn--sm" id="btnQuizSpell">Check</button>
+        </div>
         <div class="quiz__feedback" id="quizFeedback"></div>
         <div class="quiz__answer" id="quizAnswer" hidden></div>
         <div class="quiz__actions">
@@ -348,6 +363,31 @@
       </div>
       <div class="sheet__foot">
         <button type="button" class="btn btn--primary" data-close="sheetData">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- learning statistics: totals, mastery by level, 30-day trend, most missed -->
+  <div class="sheet" id="sheetStats" role="dialog" aria-modal="true" aria-labelledby="statsTitle" aria-hidden="true">
+    <div class="sheet__panel">
+      <div class="sheet__head">
+        <h2 id="statsTitle">Your progress</h2>
+        <button type="button" class="iconbtn" data-close="sheetStats" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="sheet__body">
+        <div class="statgrid" id="statsOverview"></div>
+
+        <h3 class="stats__h">Mastery by level</h3>
+        <div id="statsLevels"></div>
+
+        <h3 class="stats__h">Accuracy, last 30 days</h3>
+        <div id="statsTrend"></div>
+
+        <h3 class="stats__h">Most missed</h3>
+        <div id="statsTop"></div>
+      </div>
+      <div class="sheet__foot">
+        <button type="button" class="btn btn--primary" data-close="sheetStats">Done</button>
       </div>
     </div>
   </div>
