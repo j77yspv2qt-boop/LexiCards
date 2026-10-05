@@ -5,7 +5,7 @@
 內建 Oxford 3000/5000 完整詞庫的中文釋義、音標與例句，**沒有網路也能學**；測驗以 CEFR 程度出題，答題有干擾項、動畫與震動回饋；所有記錄只存在你自己的裝置，並且有滾動備份。
 
 - 網頁版：`index.html`（零依賴、零建置，雙擊即用）
-- Android 版：Releases 頁的 `LexiCards.apk`（v2.3，約 3.0 MB）
+- Android 版：Releases 頁的 `LexiCards.apk`（v2.4，約 3.0 MB）
 
 ---
 
@@ -76,6 +76,7 @@ App 共**四個頁面**，由左至右依序為 **Discover → My Cards → Reco
 - **中文釋義（Definition in Chinese）**：上線時顯示翻譯後的完整定義；離線或翻譯失敗時退回內建詞義
 - **英文解釋**：Free Dictionary API → Wiktionary → Datamuse 依序備援
 - **例句（Example Sentence）**：內建語料挑選，**英文與中文例句裡的詞彙都會高亮**（中文譯文在非同步補上後同樣會標出對應的詞）；內建表查不到、或你自行搜尋的字，會另外向線上來源補抓一句
+- **Related（v2.4）**：例句下方。`Word family` 由內建詞庫**離線反查**同根字（create / creation / creative）；`Similar` / `Opposite` / `Related` 來自 Datamuse 的 `rel_syn` / `rel_ant` / `rel_trg`，**離線時整組不出現**（不顯示空殼）。**點任何一顆字＝立刻在 Discover 開頭查它**。片語與句式不長 Related；Quiz 的答案面板也不顯示
 - **來源標籤**：`Dictionary API` / `Wiktionary` / `Datamuse` / `Translation only` / `Built-in list` / `Manual`
 - **狀態標籤**：`Saved`（剛存檔）、`My list`（自訂詞表）、`Record`（已記錄）
 - **失敗時**：若該詞連內建表都沒有，卡片會顯示 `Retry` 按鈕與失敗原因
@@ -178,7 +179,11 @@ Records 工具列的 📊 開啟一個全螢幕面板，內容全部由既有資
 | `Daily goal` | 每日答題目標（預設 20，可 5–200），驅動 Quiz 頁的進度環 |
 | `Storage` | 記錄數、已快取的詞義與翻譯數、占用大小、是否可持久保存 |
 | `Records backup` | 最近一次滾動備份的時間與筆數 |
-| `Export JSON` | 匯出全部資料備份 |
+| `Backup`（v2.4） | **上次匯出是多久前**；超過 30 天沒匯出時，開 App 會提醒一次（只提醒一次） |
+| `Export JSON` | 匯出全部資料備份（完整備份用這個） |
+| `Export CSV`（v2.4） | 12 欄 CSV（含複習統計），帶 UTF-8 BOM，Excel / Numbers 直接開 |
+| `Export for Anki`（v2.4） | Anki 文字匯入格式：tab 分隔三欄 `Term / Chinese / Tags`，中文在背面第一行、英文在第二行 |
+| `Import CSV / TSV`（v2.4） | 讀入本 App 的 CSV、Anki 匯出的 TSV（含 `#` 註解）或純單字清單；**只補空白欄位，絕不覆蓋你手改過的內容**；同一份檔案重複匯入不會產生變更 |
 | `Import JSON` | 匯入並與現有記錄合併 |
 | `Restore from backup` | 從滾動備份救回遺漏的記錄 |
 | `Clear meaning cache` | 清除詞義與翻譯快取（不影響記錄） |
@@ -235,9 +240,9 @@ Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmark
 
 ### 2.9 User guide（使用說明）
 
-**App info → User guide → Open the guide** 會彈出完整說明書，涵蓋十一個主題：
+**App info → User guide → Open the guide** 會彈出完整說明書，涵蓋十二個主題：
 四個頁面、Discover 的看卡與發音、存檔手勢、Records 管理、Quiz、
-間隔重複與每日目標、學習統計、外觀、資料與備份、更新、以及幾個小提示。
+間隔重複與每日目標、學習統計、卡片上的 Related、外觀、資料與備份、更新、以及幾個小提示。
 
 說明書自己有語言切換（**繁體中文 / 简体中文**），跟「Definition in Chinese」是**兩個獨立設定**：
 你可以讓卡片用繁體、說明書看簡體。內文寫在 `build/guide.js`，只寫一份繁體，
@@ -338,7 +343,7 @@ Gothic 與 Primevere 另外換掉了這些（規則見下表 `icons` / `wordmark
 
 ## 5. Android APK
 
-- **版本**：2.3（versionCode 14，minSdk 24 / targetSdk 35），約 3.0 MB，零額外依賴
+- **版本**：2.4（versionCode 15，minSdk 24 / targetSdk 35），約 3.0 MB，零額外依賴
 - **權限**：僅 `INTERNET`、`ACCESS_NETWORK_STATE`、`VIBRATE`
 - **安裝**：從 Releases 下載 APK → 允許安裝未知來源 → 完成
 - **升級**：直接安裝新版本即可覆蓋，記錄保留（見第 4 節）
@@ -402,7 +407,7 @@ Release 的資產檔名固定為 `LexiCards.apk`，App 的更新檢查就是抓�
 ```bash
 cd build
 python3 build.py      # 合併零件 → ../index.html，並檢查 JS 語法、HTML id 對照、重複宣告
-python3 smoke.py      # headless Chromium 跑 321 項功能測試（手勢、拖放、Quiz、SRS、題型、統計、外觀），輸出截圖
+python3 smoke.py      # headless Chromium 跑 359 項功能測試（手勢、拖放、Quiz、SRS、題型、統計、Related、匯出匯入、外觀），輸出截圖
 python3 shots.py      # 產生 Records / Quiz 畫面截圖（/tmp/shot-*.png）
 python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始資料，見 6.3）
 ```
@@ -421,7 +426,8 @@ python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始�
 | `build/offline.js` | 讀取詞彙表、等級池、易混淆干擾項挑選 |
 | `build/seed.js`、`build/seed2.js` | 內建詞庫與洗牌牌堆 |
 | `build/api.js`、`build/api2.js` | 線上查詢與快取 / fallback 流程（結果會補上內建表缺的欄位）、例句補丁 |
-| `build/cards.js`、`build/cards2.js` | 卡片渲染、詞義注入、例句詞彙高亮（英文連詞形變、中文連共用片段） |
+| `build/cards.js`、`build/cards2.js` | 卡片渲染、詞義注入、例句詞彙高亮（英文連詞形變、中文連共用片段）、Related 區塊（`opts.card`） |
+| `build/related.js` | 詞族反查（離線）與 Datamuse 同反義／相關詞（線上、快取、點擊查詞） |
 | `build/gesture.js`、`build/gesture2.js` | 撥動 / 長按拖放手勢引擎與存檔 |
 | `build/dict.js` | 字典頁（Discover / My Cards、篩選、洗牌、即時查詢） |
 | `build/records.js` | 記錄列表（搜尋、排序、編輯、紅叉刪除） |
@@ -435,7 +441,7 @@ python3 make_data.py  # 重新產生內建詞彙表 data_*.js（需備妥原始�
 | `build/stats.js` | 學習統計面板（v2.3）：總量、各級掌握度、30 天趨勢 SVG、常錯詞 |
 | `build/skin.js`、`build/skin_gothic.js`、`build/skin_primevere.js` | 外觀系統：`SKINS` 設定表、套用 / 清除、選擇器；各款的圖像（base64） |
 | `build/skins/gothic/`、`build/skins/primevere/` | 各款素材：原圖 / `out/` 成品、`make.py` 生成腳本（同時產出 Android 資源） |
-| `build/smoke*.py`／`build/smoke_*.js` | 321 項功能測試 |
+| `build/smoke*.py`／`build/smoke_*.js` | 359 項功能測試 |
 | `build/shots.py` | 畫面截圖腳本 |
 | `build/make_data.py` | 內建詞彙表的資料管線 |
 | `version.json` | 目前版本與 APK 下載網址（更新檢查的備援來源） |
@@ -533,6 +539,29 @@ https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v1.7/LexiCards.apk
 ---
 
 ## 9. 修訂紀錄
+
+### v2.4
+
+| # | 做了什麼 | 原因 |
+|---|---|---|
+| 1 | **卡片長出 Related 區塊**：例句下方新增關聯詞。`Word family` 從**內建詞庫離線反查**——`familyIndex()` 把牌堆所有單字按詞幹與首五字母建索引（create / creation / creative），同桶超過 `FAMILY_MAX=6` 個時按共享前綴與長度接近度排序；`Similar` / `Opposite` / `Related` 走 Datamuse `rel_syn` / `rel_ant` / `rel_trg`，結果存進詞義快取的 `rel\|` 鍵（30 天 TTL、失敗 5 分鐘，與詞義共用 `trimCaches`）。離線、片語、句式整組不出現（不長空殼）；只有最上層卡片會 `ensureRelated()`；**點任何一顆 chip 立刻在 Discover 開頭查它**；Quiz 答案面板不顯示（`opts.card` 才長） | 卡片原本只有釋義與例句，學一個字看不到它的同根字與同反義，記憶沒有橫向連結；詞族離線可得就不該等網路，同反義來自網路就不該假裝離線也有 |
+| 2 | **Data & settings 三鍵：Export CSV / Export for Anki / Import CSV / TSV**：CSV 為 12 欄（term…wrong，含 SRS 複習統計）帶 UTF-8 BOM；Anki 為 tab 分隔三欄 `Term / Chinese / Tags`（`#separator` / `#columns` 開頭，中文在背面第一行、英文第二行）。匯入用一次性狀態機解析（支援引號跨行、`""` 轉義、`#` 註解、自動判 `,` / `\t`），認得自家 CSV、Anki TSV 與純單字清單，**只補空白欄位、絕不覆蓋手改內容**，重複匯入同一檔零變更 | JSON 是完整備份，但人們要把詞表放進試算表與 Anki；匯入最怕蓋掉自己改過的釋義，所以規則定死「只補不改」 |
+| 3 | **Backup 提示與 30 天匯出提醒**：`settings.lastExportAt` / `exportReminderShown` 兩個新欄位；Data & settings 顯示 `Backup`（上次匯出是多久前），三種匯出都會 `markExported()`；超過 30 天沒匯出時開 App 輕震提醒**一次**（`maybeRemindExport()`，`exportReminderShown` 擋掉第二次） | 記錄只存在自己裝置上，唯一的副本要靠人記得匯出；提醒必須只有一下，變嘮叨就會被關掉 |
+| 4 | **說明書與 README 同步**：說明書新增「卡片上的 Related」一節、「資料與備份」補上 Backup 與三個新按鈕（十一個主題變十二個），README §2.2、§2.6、§2.9、§5、§6 同步更新 | 文件與功能不同步就是謊言 |
+
+> 測試：headless Chromium 功能測試由 **321 項增加到 359 項**。新增的 38 項釘住：
+> 詞族索引建立、create ↔ creation 互查、同桶排序把自己排第一且不包含自己、孤詞回空、
+> 卡片長 Related 而片語與 Quiz 面板不長；
+> Datamuse 網址帶 `rel=` 參數、結果入 `rel|` 快取、不含本字、二次呼叫不再發請求、
+> 異步回來重畫卡片、片語從不發請求、失敗只記 5 分鐘、點 chip 跳 Discover 查詞；
+> CSV 表頭與逐筆列、逗號欄位加引號、統計落在最後三欄；Anki 三欄表頭與回推匯入；
+> 匯入的引號解析、Anki 註解、新增 / 補空不覆蓋 / 重複匯入零變更；
+> 匯出提醒五種狀態（未匯出、今天、N 天前、只提醒一次、剛匯出不響）。
+
+> 另外修了一件測試抓到的事：**Storage 行的關係詞數顯示 `NaN`**——
+> `'… ' + Object.keys(state.cache).length - meaningKeys` 被優先序拆成「字串減數字」，
+> 整段變成 `NaN`。改成先算好 `relKeys` 再串接，測試同時釘住格式與「不得出現 NaN」
+> （原本只查子字串，`NaN cached relations` 這種壞值照樣過）。
 
 ### v2.3
 

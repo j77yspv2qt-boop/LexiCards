@@ -8,7 +8,7 @@ function hydrateCard(el, descriptor, force) {
     const btnSpeak = $('[data-speak]', el);
     if (btnSpeak) btnSpeak.setAttribute('data-audio', m.audio || '');
     if (m.zh.length || m.en.length) {
-      scroller.innerHTML = meaningBlocksHTML(m, descriptor.type);
+      scroller.innerHTML = meaningBlocksHTML(m, descriptor.type, { card: true });
       setCardSource(el, m.source);
       return;
     }
@@ -16,7 +16,7 @@ function hydrateCard(el, descriptor, force) {
     enrichRecord(descriptor.record).then(() => {
       const m2 = descriptorMeaning(descriptor);
       if (el.isConnected) {
-        scroller.innerHTML = meaningBlocksHTML(m2, descriptor.type);
+        scroller.innerHTML = meaningBlocksHTML(m2, descriptor.type, { card: true });
         setCardSource(el, m2.source === 'none' ? 'Manual' : m2.source);
       }
       if (typeof refreshRecords === 'function') refreshRecords();
@@ -27,6 +27,7 @@ function hydrateCard(el, descriptor, force) {
   getMeaning(descriptor.term, descriptor.type, force).then(m => {
     if (!el.isConnected) return;
     scroller.innerHTML = meaningBlocksHTML(m, descriptor.type, {
+      card: true,
       pendingDefZh: hasPendingPatch(descriptor.term, descriptor.type)
     });
     const phon = $('.card__phon', el);

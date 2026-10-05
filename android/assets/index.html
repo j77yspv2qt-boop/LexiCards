@@ -345,6 +345,16 @@ body[data-revsub="records"] .fab{display:grid}
 .spell-diff{background:var(--danger-soft);color:var(--danger-dark);border-radius:4px;padding:0 2px;font-weight:700}
 .spell-difflabel{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
 
+/* ---------- related words (v2.4) ---------- */
+.related{margin-top:12px}
+.related__group{margin-top:8px}
+.related__group:first-child{margin-top:0}
+.related__glabel{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+.related__chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.related__chip{border:1px solid var(--line);background:var(--accent-soft);color:var(--primary-dark);
+  border-radius:var(--pill);padding:4px 11px;font-size:12.5px;font-weight:600;transition:background .15s var(--ease)}
+.related__chip:hover{background:var(--surface);border-color:var(--primary)}
+
 /* ---------- learning statistics sheet (v2.3) ---------- */
 .statgrid{display:flex;gap:8px;margin:0 0 4px}
 .stats__h{font-size:12px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin:20px 0 9px}
@@ -942,15 +952,23 @@ body[data-revsub="records"] .fab{display:grid}
           <span class="field__label">Lookup speed</span>
           <span class="field__hint" id="speedInfo"></span>
         </div>
+        <div class="field">
+          <span class="field__label">Backup</span>
+          <span class="field__hint" id="exportInfo"></span>
+        </div>
         <div class="databtns">
           <button type="button" class="btn btn--ghost btn--sm" id="btnExport">Export JSON</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnExportCSV">Export CSV</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnExportAnki">Export for Anki</button>
           <button type="button" class="btn btn--ghost btn--sm" id="btnImport">Import JSON</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="btnImportCSV">Import CSV / TSV</button>
           <button type="button" class="btn btn--ghost btn--sm" id="btnRestore">Restore from backup</button>
           <button type="button" class="btn btn--ghost btn--sm" id="btnClearCache">Clear meaning cache</button>
           <button type="button" class="btn btn--danger btn--sm" id="btnClearAll">Delete all records</button>
         </div>
 
         <input type="file" id="fileImport" accept="application/json,.json" hidden>
+        <input type="file" id="fileImportCSV" accept=".csv,.tsv,.txt,text/csv,text/plain" hidden>
       </div>
       <div class="sheet__foot">
         <button type="button" class="btn btn--primary" data-close="sheetData">Done</button>
@@ -1086,7 +1104,7 @@ const LS_KEYS = {
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '2.3';
+const APP_VERSION = '2.4';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */
@@ -1100,6 +1118,8 @@ const DEFAULT_SETTINGS = {
   quizTricky: true,                /* build the wrong options from confusable words */
   srsEnabled: true,                /* quiz due words first (spaced repetition) */
   dailyGoal: 20,                   /* questions per day shown on the Quiz ring */
+  lastExportAt: 0,                 /* when a backup was last exported (v2.4) */
+  exportReminderShown: false,      /* the one-time nudge has been seen */
   skin: 'classic'                  /* the look: colours, icons, wordmark, app icon */
 };
 
@@ -3228,6 +3248,9 @@ function meaningBlocksHTML(m, type, opts) {
       (m.exampleZh ? '<div class="card__example-zh">' + exampleZhHTML(m) + '</div>' : '') +
       '</div>';
   }
+  /* cards only: the family and relations sit under the example, never in the
+     Quiz answer panel where clicking one would jump pages */
+  if (opts && opts.card && m.term) html += relatedBlockHTML(m.term, type);
   return html;
 }
 
@@ -3251,7 +3274,7 @@ function buildCardEl(descriptor, depth) {
       '</span>' +
 
     '</div>' +
-    '<div class="card__scroller" data-scroller>' + (m.loaded ? meaningBlocksHTML(m, type) : skeletonsHTML()) + '</div>' +
+    '<div class="card__scroller" data-scroller>' + (m.loaded ? meaningBlocksHTML(m, type, { card: true }) : skeletonsHTML()) + '</div>' +
     '<div class="card__foot">' +
       '<div class="card__meta">' +
         '<span class="chip chip--src" data-src>' + escapeHTML(m.loaded ? sourceLabel(m.source) : 'Loading...') + '</span>' +
@@ -3262,6 +3285,8 @@ function buildCardEl(descriptor, depth) {
       '<div class="card__hint">Drag the handle to save</div>' +
     '</div>' +
     '<div class="card__handle" data-drag-handle role="button" aria-label="Drag to save" title="Drag to save"><span></span></div>';
+  /* only the top card asks for its relations - one request per card seen */
+  if (depth === 0) ensureRelated(descriptor.term);
   return el;
 }
 
@@ -3275,7 +3300,7 @@ function hydrateCard(el, descriptor, force) {
     const btnSpeak = $('[data-speak]', el);
     if (btnSpeak) btnSpeak.setAttribute('data-audio', m.audio || '');
     if (m.zh.length || m.en.length) {
-      scroller.innerHTML = meaningBlocksHTML(m, descriptor.type);
+      scroller.innerHTML = meaningBlocksHTML(m, descriptor.type, { card: true });
       setCardSource(el, m.source);
       return;
     }
@@ -3283,7 +3308,7 @@ function hydrateCard(el, descriptor, force) {
     enrichRecord(descriptor.record).then(() => {
       const m2 = descriptorMeaning(descriptor);
       if (el.isConnected) {
-        scroller.innerHTML = meaningBlocksHTML(m2, descriptor.type);
+        scroller.innerHTML = meaningBlocksHTML(m2, descriptor.type, { card: true });
         setCardSource(el, m2.source === 'none' ? 'Manual' : m2.source);
       }
       if (typeof refreshRecords === 'function') refreshRecords();
@@ -3294,6 +3319,7 @@ function hydrateCard(el, descriptor, force) {
   getMeaning(descriptor.term, descriptor.type, force).then(m => {
     if (!el.isConnected) return;
     scroller.innerHTML = meaningBlocksHTML(m, descriptor.type, {
+      card: true,
       pendingDefZh: hasPendingPatch(descriptor.term, descriptor.type)
     });
     const phon = $('.card__phon', el);
@@ -3479,6 +3505,201 @@ function snapCardBack(el) {
   setTimeout(() => { el.style.transition = ''; }, 300);
 }
 
+/* =====================================================================
+   Word family and related words (v2.4)
+
+   Two different sources, two different rules:
+
+   - the word family is worked out from the bundled deck at runtime, so it is
+     there offline and costs nothing to store;
+   - synonyms, antonyms and related words come from Datamuse and live in the
+     same meaning cache (30 days, same trimming, failures cached for five
+     minutes), so a weak connection is not re-asked for every card.
+
+   Phrases and sentence patterns are skipped on purpose: there is nothing to
+   hear, nothing to spell and nothing Datamuse would relate them to.
+   ===================================================================== */
+
+/* longest first: "ationally" must win over "ally" */
+const FAMILY_SUFFIXES = [
+  'ationally', 'ability', 'ibility', 'ousness', 'iveness', 'fulness', 'lessness',
+  'ization', 'isation', 'ically', 'ically', 'ations', 'ation', 'ition', 'ution',
+  'sion', 'ments', 'ment', 'nesses', 'ness', 'ities', 'ity', 'ingly', 'edly',
+  'able', 'ible', 'less', 'ful', 'ive', 'ous', 'ical', 'ally', 'ise', 'ize',
+  'ties', 'ing', 'ers', 'est', 'ies', 'ied', 'ion', 'ed', 'er', 'ly', 'es', 'al',
+  'ic', 'y', 's'
+];
+const FAMILY_MAX = 6;
+
+const FAMILY_INDEX = { stem: null, head: null };
+
+/* the part of a word that survives its most common ending */
+function stemKey(word) {
+  const w = String(word || '').toLowerCase();
+  for (let i = 0; i < FAMILY_SUFFIXES.length; i++) {
+    const s = FAMILY_SUFFIXES[i];
+    if (w.length - s.length >= 4 && w.slice(-s.length) === s) return w.slice(0, -s.length);
+  }
+  return w;
+}
+
+/* built once, on first use, from the words the deck already carries */
+function familyIndex() {
+  if (FAMILY_INDEX.stem) return FAMILY_INDEX;
+  const stem = Object.create(null), head = Object.create(null);
+  sourceTerms('all').forEach(d => {
+    if (d.type !== 'word') return;
+    const w = String(d.term).toLowerCase();
+    if (!/^[a-z][a-z-]*$/.test(w) || w.length < 3) return;
+    const sk = stemKey(w);
+    if (!stem[sk]) stem[sk] = [];
+    stem[sk].push(d.term);
+    if (w.length >= 5) {
+      const h = w.slice(0, 5);
+      if (!head[h]) head[h] = [];
+      head[h].push(d.term);
+    }
+  });
+  FAMILY_INDEX.stem = stem;
+  FAMILY_INDEX.head = head;
+  return FAMILY_INDEX;
+}
+
+/* Words sharing this one's root: the same five-letter head (create /
+   creation / creative) or the same stem (help / helper / helpful).  The five
+   letter floor keeps port away from import, adapt away from adopt.  A big
+   bucket (deci- has a dozen) is ranked by how much the candidate still looks
+   like the word asked about, so the chip list starts with its closest kin
+   instead of whatever the deck happened to list first. */
+function wordFamily(term) {
+  const w = String(term || '').toLowerCase();
+  if (w.length < 3) return [];
+  const idx = familyIndex();
+  const seen = Object.create(null);
+  const pool = [];
+  const collect = list => (list || []).forEach(t => {
+    if (seen[t] || t === term) return;
+    seen[t] = true;
+    pool.push(t);
+  });
+  if (w.length >= 5) collect(idx.head[w.slice(0, 5)]);
+  collect(idx.stem[stemKey(w)]);
+  if (pool.length <= FAMILY_MAX) return pool;
+  const rank = t => sharedPrefix(w, t.toLowerCase()) * 2 - Math.abs(t.length - w.length);
+  pool.sort((a, b) => rank(b) - rank(a) || (a < b ? -1 : 1));
+  return pool.slice(0, FAMILY_MAX);
+}
+/* ------------------------------- online relations ---------------------------- */
+
+const REL_KINDS = [
+  { key: 'syn', label: 'Similar', rel: 'rel_syn' },
+  { key: 'ant', label: 'Opposite', rel: 'rel_ant' },
+  { key: 'trg', label: 'Related', rel: 'rel_trg' }
+];
+const REL_MAX = 5;
+const REL_INFLIGHT = new Map();
+
+function relatedKey(term) { return 'rel|' + normKey(term); }
+
+function cachedRelated(term) {
+  const hit = state.cache[relatedKey(term)];
+  if (!hit) return null;
+  const ttl = hit.ok ? CACHE_TTL : CACHE_FAIL_TTL;
+  if (Date.now() - (hit.fetchedAt || 0) > ttl) return null;
+  return hit;
+}
+
+function datamuseRelatedURL(rel, term) {
+  return 'https://api.datamuse.com/words?rel=' + rel + '&max=' + REL_MAX +
+    '&sp=' + encodeURIComponent(term);
+}
+
+function storeRelated(term, value) {
+  state.cache[relatedKey(term)] = value;
+  trimCaches();
+  saveCacheSoon();
+}
+
+/* Kick the relations off for a card.  Resolves with the (possibly empty)
+   result either way - nothing here is allowed to hold a card hostage. */
+function ensureRelated(term) {
+  const words = String(term || '').trim();
+  const key = relatedKey(words);
+  const hit = cachedRelated(words);
+  if (hit) { paintRelated(words); return Promise.resolve(hit); }
+  if (REL_INFLIGHT.has(key)) return REL_INFLIGHT.get(key);
+  const empty = { syn: [], ant: [], trg: [], ok: false, fetchedAt: Date.now() };
+  if (!/^[A-Za-z][A-Za-z-]*$/.test(words) || typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return Promise.resolve(empty);
+  }
+  const job = Promise.all(REL_KINDS.map(k =>
+    fetchJSON(datamuseRelatedURL(k.rel, words), 3500)
+      .then(list => (Array.isArray(list) ? list : [])
+        .map(x => (x && x.word) || '')
+        .filter(Boolean)
+        .filter(w => normKey(w) !== normKey(words))
+        .slice(0, REL_MAX))
+      .catch(() => [])
+  )).then(parts => {
+    const out = { syn: parts[0], ant: parts[1], trg: parts[2],
+                  ok: parts.some(p => p.length), fetchedAt: Date.now() };
+    storeRelated(words, out);
+    paintRelated(words);
+    return out;
+  }, () => {
+    storeRelated(words, empty);          /* five minutes, then one more try */
+    paintRelated(words);
+    return empty;
+  });
+  REL_INFLIGHT.set(key, job);
+  job.then(() => REL_INFLIGHT.delete(key), () => REL_INFLIGHT.delete(key));
+  return job;
+}
+
+/* ------------------------------- rendering ------------------------------- */
+
+function relatedChipsHTML(words) {
+  return words.map(w =>
+    '<button type="button" class="related__chip" data-related-term="' + escapeHTML(w) + '">' +
+    escapeHTML(w) + '</button>').join('');
+}
+
+function relatedGroupsHTML(term, fam, rel) {
+  let html = '';
+  if (fam && fam.length) {
+    html += '<div class="related__group"><div class="related__glabel">Word family</div>' +
+      '<div class="related__chips">' + relatedChipsHTML(fam) + '</div></div>';
+  }
+  if (rel) {
+    REL_KINDS.forEach(k => {
+      const list = rel[k.key] || [];
+      if (!list.length) return;
+      html += '<div class="related__group"><div class="related__glabel">' + k.label + '</div>' +
+        '<div class="related__chips">' + relatedChipsHTML(list) + '</div></div>';
+    });
+  }
+  return html;
+}
+
+/* rendered under the example on every card; the online groups simply stay
+   empty until their request lands and the block is repainted */
+function relatedBlockHTML(term, type) {
+  const fam = (type === 'phrase' || type === 'pattern') ? [] : wordFamily(term);
+  const rel = cachedRelated(term);
+  return '<div class="related" data-related data-term="' + escapeHTML(term) + '">' +
+    relatedGroupsHTML(term, fam, rel) + '</div>';
+}
+
+/* repaint every card showing this term (the request answers long after the
+   card was drawn) */
+function paintRelated(term) {
+  const key = normKey(term);
+  $$('[data-related]').forEach(box => {
+    if (normKey(box.getAttribute('data-term')) !== key) return;
+    const fam = wordFamily(term);
+    box.innerHTML = relatedGroupsHTML(term, fam, cachedRelated(term));
+  });
+}
 /* =====================================================================
    Gesture engine: swipe left/right to change card, drag the bottom
    handle down to the save panel (long-press on the card itself was
@@ -3768,6 +3989,13 @@ function initDictionary() {
     stage.addEventListener('click', e => {
       const speakBtn = e.target.closest('[data-speak]');
       if (speakBtn) { handleSpeak(e); return; }
+      /* a related word (family / synonym / opposite) jumps into the deck */
+      const relChip = e.target.closest('[data-related-term]');
+      if (relChip) {
+        e.stopPropagation();
+        lookupInstantTerm(relChip.getAttribute('data-related-term'));
+        return;
+      }
       const btn = e.target.closest('[data-retry]');
       if (!btn) return;
       const card = btn.closest('.card');
@@ -4126,11 +4354,17 @@ function syncSettingsUI() {
   if (info) {
     let bytes = 0;
     try { bytes = JSON.stringify(state.records).length + JSON.stringify(state.cache).length + JSON.stringify(state.tr).length; } catch (e) { bytes = 0; }
-    info.textContent = state.records.length + ' records - ' + Object.keys(state.cache).length +
-      ' cached meanings - ' + Object.keys(state.tr).length + ' cached translations - about ' +
+    /* related-word entries share the cache but are not meanings */
+    const meaningKeys = Object.keys(state.cache).filter(k => k.indexOf('rel|') !== 0).length;
+    const relKeys = Object.keys(state.cache).length - meaningKeys;
+    info.textContent = state.records.length + ' records - ' + meaningKeys +
+      ' cached meanings - ' + relKeys + ' cached relations - ' +
+      Object.keys(state.tr).length + ' cached translations - about ' +
       Math.max(1, Math.round(bytes / 1024)) + ' KB. ' + nativeDescribe() + ' ' +
       (storageOK ? 'Kept on this device (localStorage).' : 'This browser blocks storage, so data is temporary.');
   }
+  const exp = $('#exportInfo');
+  if (exp) exp.textContent = exportReminderText();
   const bak = $('#backupInfo');
   if (bak) bak.textContent = backupInfo();
   const speed = $('#speedInfo');
@@ -4178,15 +4412,208 @@ function toggleSwitch(id) {
   syncSettingsUI();
 }
 
+function exportStamp() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 function exportData() {
   const payload = {
     app: 'LexiCards', version: 1, exportedAt: new Date().toISOString(),
     records: state.records, settings: state.settings, custom: state.custom
   };
-  const d = new Date();
-  const stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  download('lexicards-' + stamp + '.json', JSON.stringify(payload, null, 2));
+  download('lexicards-' + exportStamp() + '.json', JSON.stringify(payload, null, 2));
+  markExported();
   showToast('Exported ' + state.records.length + ' records', 'ok');
+}
+
+/* --- tabular exports (v2.4) ---------------------------------------------------
+   JSON is the faithful backup; these two are for the tools people actually
+   open a word list in: a spreadsheet, or Anki.  Nothing is re-derived here -
+   the text is built from the records, so what lands in the file is what is
+   stored, not what the app would fetch again. */
+
+function csvCell(v) {
+  const s = String(v == null ? '' : v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function tsvCell(v) {
+  return String(v == null ? '' : v).replace(/[\t\r\n]+/g, ' ').trim();
+}
+
+function recordsCSVText() {
+  const head = ['term', 'type', 'level', 'phonetic', 'zh', 'en', 'example', 'tags', 'note', 'reviews', 'correct', 'wrong'];
+  const lines = [head.join(',')];
+  state.records.forEach(r => {
+    const st = r.stats || {};
+    lines.push([
+      csvCell(r.term), csvCell(r.type || 'word'), csvCell(cefrOf(r.term) || ''),
+      csvCell(r.phonetic || ''), csvCell((r.zh || []).join(' / ')),
+      csvCell(enTexts(r).join(' / ')), csvCell(r.example || ''),
+      csvCell((r.tags || []).join(' ')), csvCell(r.note || ''),
+      st.seen || 0, st.correct || 0, st.wrong || 0
+    ].join(','));
+  });
+  return lines.join('\r\n');
+}
+
+/* the three columns Anki's text importer asks for; the Chinese goes on the
+   first line of the back, the English below it */
+function recordsAnkiText() {
+  const lines = ['#separator:tab', '#html:true', '#columns:Term\tChinese\tTags'];
+  state.records.forEach(r => {
+    const tags = (r.tags || []).slice();
+    const lv = cefrOf(r.term);
+    if (lv && tags.indexOf(lv) < 0) tags.push(lv);
+    const back = (r.zh || []).map(z => displayZh(z)).join(' / ') +
+      (enTexts(r).length ? '\n' + enTexts(r).join('\n') : '');
+    lines.push([tsvCell(r.term), tsvCell(back), tsvCell(tags.join(' '))].join('\t'));
+  });
+  return lines.join('\r\n');
+}
+
+function exportCSV() {
+  download('lexicards-' + exportStamp() + '.csv', '\uFEFF' + recordsCSVText());
+  markExported();
+  showToast('Exported ' + state.records.length + ' records as CSV', 'ok');
+}
+function exportAnki() {
+  download('lexicards-' + exportStamp() + '.txt', recordsAnkiText());
+  markExported();
+  showToast('Exported ' + state.records.length + ' cards for Anki', 'ok');
+}
+/* --- tabular import ----------------------------------------------------------
+   Accepts what we export (CSV), what Anki exports (tab separated, with its
+   #comments) and plain "one term per line" files.  Existing entries are only
+   ever filled in, never overwritten - a word you corrected stays corrected. */
+
+/* One pass over the whole text rather than one line at a time: Anki writes a
+   back field that holds both languages as "Chinese\nEnglish", so a quoted cell
+   can span lines and a line split would tear it in two.  A quoted cell also
+   doubles any quote inside it ("say ""hi"""). */
+function parseDelimited(text) {
+  const body = String(text || '').replace(/^\uFEFF/, '');
+  const firstLine = body.split(/\r?\n/).filter(l => l.trim() && l.charAt(0) !== '#')[0] || '';
+  const delim = (firstLine.indexOf('\t') >= 0 && firstLine.indexOf(',') < 0) ? '\t' : ',';
+  const rows = [];
+  let cells = [], cur = '', quoted = false;
+  const endCell = () => { cells.push(cur); cur = ''; };
+  const endRow = () => {
+    endCell();
+    if (cells.some(c => String(c).trim())) rows.push(cells);
+    cells = [];
+  };
+  for (let i = 0; i < body.length; i++) {
+    const ch = body.charAt(i);
+    if (quoted) {
+      if (ch !== '"') { cur += ch; continue; }
+      if (body.charAt(i + 1) === '"') { cur += '"'; i++; } else quoted = false;
+    } else if (ch === '"') {
+      quoted = true;
+    } else if (ch === delim) {
+      endCell();
+    } else if (ch === '\n') {
+      endRow();
+    } else if (ch !== '\r') {
+      cur += ch;
+    }
+  }
+  if (cur.length || cells.length) endRow();
+  /* Anki's own comments (#separator, #columns, ...) are metadata, not rows */
+  while (rows.length && String(rows[0][0] || '').charAt(0) === '#') rows.shift();
+  if (rows.length && String(rows[0][0] || '').trim().toLowerCase() === 'term') rows.shift();
+  return rows;
+}
+
+function importDelimitedText(text) {
+  const rows = parseDelimited(text);
+  let added = 0, updated = 0, skipped = 0;
+  rows.forEach(cells => {
+    const term = String(cells[0] || '').trim();
+    if (!term) { skipped++; return; }
+    const wide = cells.length >= 4;              /* our own CSV column layout */
+    const back = String(cells[1] || '');
+    const nl = back.indexOf('\n');
+    const zhText = wide ? (cells[4] || '') : (nl >= 0 ? back.slice(0, nl) : back);
+    const enText = wide ? (cells[5] || '') : (nl >= 0 ? back.slice(nl + 1).replace(/\n/g, ' / ') : '');
+    const data = {
+      term: term,
+      type: wide && TYPE_LABEL[cells[1]] ? cells[1] : guessType(term),
+      zh: splitSenses(zhText),
+      en: enText ? enText.split(/\s*\/\s*/).map(t => t.trim()).filter(Boolean) : [],
+      phonetic: wide ? (cells[3] || '') : '',
+      example: wide ? (cells[6] || '') : '',
+      tags: String(wide ? (cells[7] || '') : (cells[2] || '')).split(/\s+/).filter(Boolean),
+      note: wide ? (cells[8] || '') : '',
+      source: 'import'
+    };
+    const existing = findRecordByTerm(term);
+    if (existing) {
+      let changed = false;
+      if ((!existing.zh || !existing.zh.length) && data.zh.length) { existing.zh = data.zh; changed = true; }
+      if ((!existing.en || !existing.en.length) && data.en.length) { existing.en = data.en; changed = true; }
+      if (!existing.phonetic && data.phonetic) { existing.phonetic = data.phonetic; changed = true; }
+      if (!existing.example && data.example) { existing.example = data.example; changed = true; }
+      const fresh = data.tags.filter(t => (existing.tags || []).indexOf(t) < 0);
+      if (fresh.length) { existing.tags = (existing.tags || []).concat(fresh); changed = true; }
+      if (!existing.note && data.note) { existing.note = data.note; changed = true; }
+      if (changed) { existing.updatedAt = Date.now(); updated++; } else skipped++;
+    } else {
+      upsertRecord(data);
+      added++;
+    }
+  });
+  if (added || updated) { saveRecords(); onRecordsChanged(); }
+  return { added: added, updated: updated, skipped: skipped };
+}
+
+function importDelimitedFile(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const res = importDelimitedText(String(reader.result));
+      if (!res.added && !res.updated) showToast('Nothing new in that file', 'warn');
+      else showToast('Imported: ' + res.added + ' new, ' + res.updated + ' filled in', 'ok');
+    } catch (err) {
+      showToast('Could not read that file', 'err');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* --- export reminder ---------------------------------------------------------
+   Nothing here is uploaded anywhere, so the copy on this device is the only
+   copy - the reminder is a nudge, once, never a nag. */
+const EXPORT_NUDGE_DAYS = 30;
+
+function markExported() {
+  state.settings.lastExportAt = Date.now();
+  saveSettings();
+  syncSettingsUI();
+}
+
+function exportReminderText() {
+  const at = state.settings.lastExportAt || 0;
+  if (!at) return 'You have never exported a backup - the records live only on this device.';
+  const days = Math.floor((Date.now() - at) / 86400000);
+  if (days <= 0) return 'Exported today.';
+  return 'Last export ' + days + ' day' + (days === 1 ? '' : 's') + ' ago.';
+}
+
+function exportIsOverdue() {
+  const at = state.settings.lastExportAt || 0;
+  return !at || (Date.now() - at) > EXPORT_NUDGE_DAYS * 86400000;
+}
+
+function maybeRemindExport() {
+  if (!exportIsOverdue() || state.settings.exportReminderShown) return false;
+  state.settings.exportReminderShown = true;
+  saveSettings();
+  showToast('Records live only on this device - a periodic Export keeps them safe', 'warn', 5200);
+  return true;
 }
 
 function importData(e) {
@@ -4265,6 +4692,15 @@ function initDataSheet() {
 
   const exportBtn = $('#btnExport');
   if (exportBtn) exportBtn.addEventListener('click', exportData);
+
+  const csvBtn = $('#btnExportCSV');
+  if (csvBtn) csvBtn.addEventListener('click', exportCSV);
+  const ankiBtn = $('#btnExportAnki');
+  if (ankiBtn) ankiBtn.addEventListener('click', exportAnki);
+  const importCsvBtn = $('#btnImportCSV');
+  const fileImportCsv = $('#fileImportCSV');
+  if (importCsvBtn && fileImportCsv) importCsvBtn.addEventListener('click', () => fileImportCsv.click());
+  if (fileImportCsv) fileImportCsv.addEventListener('change', importDelimitedFile);
 
   const importBtn = $('#btnImport');
   const fileInput = $('#fileImport');
@@ -4412,6 +4848,16 @@ const GUIDE_SECTIONS = [
     ]
   },
   {
+    h: '卡片上的 Related（詞族・同反義）',
+    p: ['例句下方多了一區 Related，全部可點：'],
+    ul: [
+      'Word family：從內建詞庫即時反查的同根字（create / creation / creative），離線也有',
+      'Similar / Opposite / Related：向 Datamuse 查到的同義、反義與相關詞，離線時這一區不出現（不顯示空殼）',
+      '點任何一顆字＝立刻在 Discover 開頭查這個詞；結果與詞義一起寫進快取，30 天後才更新',
+      '片語與句式不會長出 Related（沒有單字形態可依），Quiz 的答案面板也不顯示'
+    ]
+  },
+  {
     h: '外觀（App skin）',
     p: ['App info → App skin 可更換整個 App 的外觀：配色、四個頁面的圖示、LexiCards 字標與 ' +
       'App 圖示會整組一起換，選擇會記住，重開 App 仍生效' +
@@ -4424,7 +4870,9 @@ const GUIDE_SECTIONS = [
       'Vibration feedback：關掉震動回饋',
       'Tricky Quiz options：用容易混淆的字當干擾選項',
       'Storage、Records backup、Lookup speed：目前佔用、備份時間、查詢速度',
-      'Export JSON：把記錄匯出成檔案，建議定期做',
+      'Backup：上次匯出是多久前；超過 30 天沒匯出，開 App 會提醒一次',
+      'Export JSON：完整備份；Export CSV：試算表用的 12 欄表格；Export for Anki：Anki 三欄文字檔',
+      'Import CSV / TSV：匯入本 App 的 CSV、Anki TSV 或純單字清單，只補空白欄位、不覆蓋手改內容',
       'Import JSON、Restore from backup：匯入檔案或還原自動備份',
       'Clear meaning cache：清掉查詢快取，記錄不會不見',
       'Delete all records：清空所有記錄，無法復原'
@@ -6686,6 +7134,7 @@ function init() {
   refreshRecords();
   updateQuizStats();
   renderDailyCard();
+  maybeRemindExport();
 
   if (!storageOK) {
     showToast('This browser blocks local storage - records will not persist.', 'warn', 4200);

@@ -49,6 +49,13 @@ function initDictionary() {
     stage.addEventListener('click', e => {
       const speakBtn = e.target.closest('[data-speak]');
       if (speakBtn) { handleSpeak(e); return; }
+      /* a related word (family / synonym / opposite) jumps into the deck */
+      const relChip = e.target.closest('[data-related-term]');
+      if (relChip) {
+        e.stopPropagation();
+        lookupInstantTerm(relChip.getAttribute('data-related-term'));
+        return;
+      }
       const btn = e.target.closest('[data-retry]');
       if (!btn) return;
       const card = btn.closest('.card');

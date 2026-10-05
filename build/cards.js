@@ -324,6 +324,9 @@ function meaningBlocksHTML(m, type, opts) {
       (m.exampleZh ? '<div class="card__example-zh">' + exampleZhHTML(m) + '</div>' : '') +
       '</div>';
   }
+  /* cards only: the family and relations sit under the example, never in the
+     Quiz answer panel where clicking one would jump pages */
+  if (opts && opts.card && m.term) html += relatedBlockHTML(m.term, type);
   return html;
 }
 
@@ -347,7 +350,7 @@ function buildCardEl(descriptor, depth) {
       '</span>' +
 
     '</div>' +
-    '<div class="card__scroller" data-scroller>' + (m.loaded ? meaningBlocksHTML(m, type) : skeletonsHTML()) + '</div>' +
+    '<div class="card__scroller" data-scroller>' + (m.loaded ? meaningBlocksHTML(m, type, { card: true }) : skeletonsHTML()) + '</div>' +
     '<div class="card__foot">' +
       '<div class="card__meta">' +
         '<span class="chip chip--src" data-src>' + escapeHTML(m.loaded ? sourceLabel(m.source) : 'Loading...') + '</span>' +
@@ -358,5 +361,7 @@ function buildCardEl(descriptor, depth) {
       '<div class="card__hint">Drag the handle to save</div>' +
     '</div>' +
     '<div class="card__handle" data-drag-handle role="button" aria-label="Drag to save" title="Drag to save"><span></span></div>';
+  /* only the top card asks for its relations - one request per card seen */
+  if (depth === 0) ensureRelated(descriptor.term);
   return el;
 }

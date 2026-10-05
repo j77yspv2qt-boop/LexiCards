@@ -1,10 +1,10 @@
 {
-  "version": "2.3",
+  "version": "2.4",
   "released": "2026-10-05",
   "apk": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest/download/LexiCards.apk",
-  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.3/LexiCards.apk",
+  "apk_mirror": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@v2.4/LexiCards.apk",
   "page": "https://github.com/j77yspv2qt-boop/LexiCards/releases/latest",
   "mirror_page": "https://cdn.jsdelivr.net/gh/j77yspv2qt-boop/LexiCards@main/",
-  "notes": "Quiz question types (v2.3): besides the three-choice meaning question you can now answer in reverse (Chinese to word, with look-alike word distractors), listen (the word is only spoken, with replay) or spell (type the word; case and spaces do not matter and a near miss is marked from the first wrong character). Phrases and sentence patterns keep the choice question. Records gains a statistics sheet: saved/reviewed/accuracy/due tiles, mastery per CEFR level, a 30-day accuracy line drawn as pure SVG (days with no reviews are gaps, not zeros) and the most-missed words, each one opening its entry."
+  "notes": "Card knowledge and data (v2.4): cards now carry a Related block under the example - the word family is worked out from the bundled deck offline (create / creation / creative), and similar / opposite / related words come from Datamuse, cached with the meanings and refreshed after 30 days; tapping any chip looks that word up on the spot. Data & settings gains Export CSV (spreadsheet, UTF-8 BOM), Export for Anki (tab separated, three columns) and Import CSV / TSV that reads our own export, an Anki export or a plain word list, only ever filling in blanks; the sheet also says when you last exported and nudges once after 30 days without one."
 }
 

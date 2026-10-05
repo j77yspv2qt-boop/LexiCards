@@ -96,6 +96,16 @@ const GUIDE_SECTIONS = [
     ]
   },
   {
+    h: '卡片上的 Related（詞族・同反義）',
+    p: ['例句下方多了一區 Related，全部可點：'],
+    ul: [
+      'Word family：從內建詞庫即時反查的同根字（create / creation / creative），離線也有',
+      'Similar / Opposite / Related：向 Datamuse 查到的同義、反義與相關詞，離線時這一區不出現（不顯示空殼）',
+      '點任何一顆字＝立刻在 Discover 開頭查這個詞；結果與詞義一起寫進快取，30 天後才更新',
+      '片語與句式不會長出 Related（沒有單字形態可依），Quiz 的答案面板也不顯示'
+    ]
+  },
+  {
     h: '外觀（App skin）',
     p: ['App info → App skin 可更換整個 App 的外觀：配色、四個頁面的圖示、LexiCards 字標與 ' +
       'App 圖示會整組一起換，選擇會記住，重開 App 仍生效' +
@@ -108,7 +118,9 @@ const GUIDE_SECTIONS = [
       'Vibration feedback：關掉震動回饋',
       'Tricky Quiz options：用容易混淆的字當干擾選項',
       'Storage、Records backup、Lookup speed：目前佔用、備份時間、查詢速度',
-      'Export JSON：把記錄匯出成檔案，建議定期做',
+      'Backup：上次匯出是多久前；超過 30 天沒匯出，開 App 會提醒一次',
+      'Export JSON：完整備份；Export CSV：試算表用的 12 欄表格；Export for Anki：Anki 三欄文字檔',
+      'Import CSV / TSV：匯入本 App 的 CSV、Anki TSV 或純單字清單，只補空白欄位、不覆蓋手改內容',
       'Import JSON、Restore from backup：匯入檔案或還原自動備份',
       'Clear meaning cache：清掉查詢快取，記錄不會不見',
       'Delete all records：清空所有記錄，無法復原'

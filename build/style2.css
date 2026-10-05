@@ -108,6 +108,16 @@ body[data-revsub="records"] .fab{display:grid}
 .spell-diff{background:var(--danger-soft);color:var(--danger-dark);border-radius:4px;padding:0 2px;font-weight:700}
 .spell-difflabel{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
 
+/* ---------- related words (v2.4) ---------- */
+.related{margin-top:12px}
+.related__group{margin-top:8px}
+.related__group:first-child{margin-top:0}
+.related__glabel{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+.related__chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.related__chip{border:1px solid var(--line);background:var(--accent-soft);color:var(--primary-dark);
+  border-radius:var(--pill);padding:4px 11px;font-size:12.5px;font-weight:600;transition:background .15s var(--ease)}
+.related__chip:hover{background:var(--surface);border-color:var(--primary)}
+
 /* ---------- learning statistics sheet (v2.3) ---------- */
 .statgrid{display:flex;gap:8px;margin:0 0 4px}
 .stats__h{font-size:12px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin:20px 0 9px}

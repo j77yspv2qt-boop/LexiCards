@@ -19,7 +19,7 @@ const LS_KEYS = {
   backup  : 'lexi.records.bak.v1'
 };
 
-const APP_VERSION = '2.3';
+const APP_VERSION = '2.4';
 
 const DEFAULT_SETTINGS = {
   definitionLang: 'traditional',   /* script for "Definition in Chinese" (App info) */
@@ -33,6 +33,8 @@ const DEFAULT_SETTINGS = {
   quizTricky: true,                /* build the wrong options from confusable words */
   srsEnabled: true,                /* quiz due words first (spaced repetition) */
   dailyGoal: 20,                   /* questions per day shown on the Quiz ring */
+  lastExportAt: 0,                 /* when a backup was last exported (v2.4) */
+  exportReminderShown: false,      /* the one-time nudge has been seen */
   skin: 'classic'                  /* the look: colours, icons, wordmark, app icon */
 };
 

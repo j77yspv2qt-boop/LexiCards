@@ -584,19 +584,33 @@
        transform and passes a string match, but parks the page off screen.
        Awaited on purpose: this walk must finish before the next section starts
        anything that moves the track under it. */
+    /* A fixed wait is a coin toss under headless virtual time - the page
+       transition may not have advanced a single frame yet, and the box then
+       reads as the pre-transition position.  Poll until the box stops moving
+       instead: a page that genuinely parks off screen never settles inside the
+       pager, so a real layout bug still fails, just fairly. */
+    var settlePage = async function (el) {
+      var last = null, stable = 0;
+      for (var t = 0; t < 24 && stable < 3; t++) {
+        var r = el.getBoundingClientRect();
+        if (last !== null && Math.abs(r.left - last) < 0.5) stable++; else stable = 0;
+        last = r.left;
+        await wait(60);
+      }
+      return el.getBoundingClientRect();
+    };
     await (async function () {
       var pagerL = document.getElementById('pager').getBoundingClientRect().left;
       for (var _i = 0; _i < 4; _i++) {
         var id = ['discover', 'mine', 'records', 'quiz'][_i];
         setPage(id);
-        await wait(420);
-        var r = document.getElementById('view-' + id).getBoundingClientRect();
+        var r = await settlePage(document.getElementById('view-' + id));
         step('layout: ' + id + ' lands inside the pager', Math.abs(r.left - pagerL) < 2 && r.width > 0,
           'left ' + Math.round(r.left - pagerL) + 'px, width ' + Math.round(r.width) + 'px, track ' +
           document.getElementById('pagerTrack').style.transform);
       }
       setPage('discover');
-      await wait(420);
+      await settlePage(document.getElementById('view-discover'));
     })();
     await wait(2000);
 
@@ -1377,11 +1391,18 @@
     /* reverse: the Chinese goes in, the English comes out */
     setQuizMode('reverse');
     await wait(160);
-    var rq = state.round.current;
+    /* a phrase in the pool deliberately stays on the choice question, so keep
+       drawing until a single word turns up */
+    var rq = state.round.current, rqTries = 0;
+    while ((!rq || rq.mode !== 'reverse') && rqTries++ < 12) {
+      nextCard();
+      await wait(60);
+      rq = state.round.current;
+    }
     step('mode: reverse asks for the word',
       !!rq && rq.mode === 'reverse' &&
       document.getElementById('quizAsk').textContent === 'Which word is this?',
-      document.getElementById('quizAsk').textContent);
+      rq ? rq.term + ' (' + rq.mode + ')' : 'nothing drawn');
     step('mode: reverse shows the gloss, not the word',
       !!rq && document.getElementById('quizTerm').textContent === rq.zh[0] &&
       document.getElementById('quizTerm').hidden === false);
@@ -1571,6 +1592,202 @@
     })());
     step('stats: records survive the visit untouched', state.records.length === totals.saved,
       state.records.length + ' records');
+
+    /* ---- 20. v2.4: word family, related words, tabular export ---- */
+    /* (a) the family is worked out offline from the bundled deck */
+    step('family: the index is built from the deck', (function () {
+      var idx = familyIndex();
+      return !!idx.stem && !!idx.head && Object.keys(idx.stem).length > 100;
+    })(), Object.keys(familyIndex().stem).length + ' stems');
+    step('family: create and creation belong together',
+      wordFamily('create').indexOf('creation') >= 0, wordFamily('create').join(', '));
+    step('family: the lookup works from the other side too',
+      wordFamily('creation').indexOf('create') >= 0, wordFamily('creation').join(', '));
+    step('family: a big bucket is ranked by how close the word is',
+      wordFamily('create').length <= FAMILY_MAX &&
+      wordFamily('create').indexOf('creation') === 0,
+      wordFamily('create').slice(0, 3).join(', '));
+    step('family: the word itself is never in its own family',
+      wordFamily('create').indexOf('create') < 0 && wordFamily('abandon').indexOf('abandon') < 0);
+    step('family: a word with no relatives comes back empty',
+      wordFamily('qqzzxx').length === 0, wordFamily('qqzzxx').length + ' words');
+    step('family: the block is rendered on a card',
+      meaningBlocksHTML({ term: 'create', zh: ['創造'], en: [], defZh: [], example: 'x', loaded: true },
+        'word', { card: true }).indexOf('data-related') > 0);
+    step('family: a phrase carries no family block',
+      meaningBlocksHTML({ term: 'give up', zh: ['放棄'], en: [], defZh: [], loaded: true },
+        'phrase', { card: true }).indexOf('Word family') < 0);
+    step('family: the Quiz answer panel stays free of it',
+      meaningBlocksHTML({ term: 'create', zh: ['創造'], en: [], defZh: [], loaded: true }, 'word')
+        .indexOf('data-related') < 0);
+
+    /* (b) relations come from the network, cached, and never block a card */
+    step('related: Datamuse relations are asked for with the rel= parameter', (function () {
+      var url = datamuseRelatedURL('rel_syn', 'create');
+      return url.indexOf('rel=rel_syn') > 0 && url.indexOf('sp=create') > 0;
+    })(), datamuseRelatedURL('rel_syn', 'create'));
+    var relRes = await ensureRelated('create');
+    step('related: the stubbed answer is stored under a rel| cache key',
+      !!cachedRelated('create') && !!state.cache['rel|' + normKey('create')],
+      Object.keys(state.cache).filter(function (k) { return k.indexOf('rel|') === 0; }).length + ' entries');
+    step('related: the relations do not repeat the word itself',
+      relRes.syn.every(function (w) { return normKey(w) !== normKey('create'); }),
+      relRes.syn.join(',') + ' | ' + relRes.ant.join(','));
+    step('related: a second call is served from the cache', (function () {
+      var before = window.__fetchLog.length;
+      ensureRelated('create');
+      return window.__fetchLog.length === before;
+    })());
+    step('related: painting fills the block on a matching card', (function () {
+      var host = document.createElement('div');
+      host.innerHTML = relatedBlockHTML('create', 'word');
+      document.body.appendChild(host);
+      paintRelated('create');
+      var ok = !!host.querySelector('.related__chip');
+      host.remove();
+      return ok;
+    })());
+    step('related: a phrase is never sent to Datamuse', (function () {
+      var before = window.__fetchLog.length;
+      return ensureRelated('give up the ghost').then(function () {
+        return window.__fetchLog.length === before;
+      });
+    })(), 'no request for a phrase');
+    step('related: the cache stores a failure briefly instead of hammering',
+      (function () {
+        window.__fetchMode = 'all-fail';
+        return ensureRelated('zzzrelated').then(function (r) {
+          window.__fetchMode = 'ok';
+          var hit = cachedRelated('zzzrelated');
+          return !!hit && hit.ok === false && Array.isArray(hit.syn);
+        });
+      })());
+
+    /* (c) clicking a related word puts it on top of the deck */
+    step('related: a chip click opens that word in Discover', (function () {
+      setDictSub('discover');
+      state.deck.splice(state.deckIndex, 0, { term: 'creature', type: 'word', level: 'custom', source: 'custom' });
+      renderStack();
+      var chip = document.querySelector('#stage [data-related-term]');
+      if (!chip) { step('related: a chip click opens that word in Discover', false, 'no chip on screen'); return true; }
+      var word = chip.getAttribute('data-related-term');
+      var at = state.deckIndex;
+      chip.click();
+      return state.deck[at].term === word || state.deck[at + 1].term === word;
+    })());
+
+    /* (d) tabular export */
+    step('export: CSV starts with the documented header',
+      recordsCSVText().split('\r\n')[0] ===
+      'term,type,level,phonetic,zh,en,example,tags,note,reviews,correct,wrong',
+      recordsCSVText().split('\r\n')[0]);
+    step('export: CSV has one line per record plus the header',
+      recordsCSVText().split('\r\n').length === state.records.length + 1,
+      recordsCSVText().split('\r\n').length + ' lines');
+    step('export: a meaning containing a comma is quoted',
+      csvCell('a, b') === '"a, b"' && csvCell('say "hi"') === '"say ""hi"""',
+      csvCell('a, b'));
+    step('export: CSV carries the record stats in the last columns', (function () {
+      var line = recordsCSVText().split('\r\n').filter(function (l) { return l.indexOf('legacyword') >= 0; })[0] || '';
+      var cells = parseDelimited(line)[0] || [];       /* parseDelimited hands back rows */
+      return cells.length === 12 && Number(cells[9]) >= 0;
+    })(), (function () {
+      var line = recordsCSVText().split('\r\n').filter(function (l) { return l.indexOf('legacyword') >= 0; })[0] || '';
+      return (parseDelimited(line)[0] || []).length + ' cells from: ' + line.slice(0, 90);
+    })());
+    step('export: the Anki file opens with the three-column header', (function () {
+      var lines = recordsAnkiText().split('\r\n');
+      return lines[0] === '#separator:tab' && lines[2] === '#columns:Term\tChinese\tTags' &&
+        lines[3].split('\t').length === 3;
+    })(), recordsAnkiText().split('\r\n')[3]);
+    step('export: the Anki back cell never contains a tab',
+      recordsAnkiText().split('\r\n').slice(3).every(function (l) { return l.split('\t').length === 3; }));
+
+    /* (e) tabular import */
+    step('import: a CSV with quotes and a header parses back', (function () {
+      var rows = parseDelimited('term,type,level,phonetic,zh,en,example,tags,note,reviews,correct,wrong\r\n' +
+        'importone,word,A2,/x/,"意味, 含逗號","an explanation",example,tag1 tag2,note,3,2,1\r\n');
+      return rows.length === 1 && rows[0][0] === 'importone' && rows[0][4] === '意味, 含逗號';
+    })(), JSON.stringify(parseDelimited('term,a\r\n"x,1","y"')[0] || []));
+    step('import: Anki comments and tab columns are understood', (function () {
+      /* Anki writes the two languages of one card as "Chinese\nEnglish" */
+      var rows = parseDelimited('#separator:tab\n#columns:Term\tChinese\tTags\n' +
+        'relate\t"相關\nto associate"\twork B2\n');
+      return rows.length === 1 && rows[0][0] === 'relate' && rows[0][2] === 'work B2' &&
+        rows[0][1] === '相關\nto associate';
+    })(), JSON.stringify(parseDelimited('#separator:tab\nrelate\t相關\nwork B2\n')));
+step('import: a new word lands in Records with its Chinese and tags', (function () {
+      var before = state.records.length;
+      var res = importDelimitedText('term,type,level,phonetic,zh,en,example,tags,note,reviews,correct,wrong\r\n' +
+        'freshimport,word,B1,/f/,"新鮮匯入","a fresh import","An example.",reading,note,0,0,0\r\n');
+      var rec = findRecordByTerm('freshimport');
+      step('import: the counter and the record agree',
+        res.added === 1 && state.records.length === before + 1 && !!rec, res.added + ' added');
+      step('import: the fields land where they belong',
+        !!rec && rec.zh[0] === '新鮮匯入' && rec.phonetic === '/f/' &&
+        (rec.tags || []).indexOf('reading') >= 0 && rec.example === 'An example.');
+      return true;
+    })());
+    step('import: an existing word is filled in, never overwritten', (function () {
+      var existing = findRecordByTerm('freshimport');
+      existing.zh = ['我自己改的'];
+      var res = importDelimitedText('term,type,level,phonetic,zh,en,example,tags,note,reviews,correct,wrong\r\n' +
+        'freshimport,word,B1,/f/,"不該覆蓋","x","y",extra note,note,0,0,0\r\n');
+      return res.added === 0 && res.updated === 1 &&
+        findRecordByTerm('freshimport').zh[0] === '我自己改的' &&
+        (findRecordByTerm('freshimport').tags || []).indexOf('extra') >= 0;
+    })());
+    step('import: importing the same file twice changes nothing', (function () {
+      var text = 'term,type,level,phonetic,zh,en,example,tags,note,reviews,correct,wrong\r\n' +
+        'freshimport,word,B1,/f/,"不該覆蓋","x","y",extra note,note,0,0,0\r\n';
+      var res = importDelimitedText(text);
+      return res.added === 0 && res.updated === 0 && res.skipped === 1;
+    })(), 'skipped the unchanged row');
+    step('import: our own Anki export comes back in', (function () {
+      var res = importDelimitedText(recordsAnkiText());
+      return res.added === 0 && !!findRecordByTerm('freshimport') &&
+        findRecordByTerm('freshimport').zh.length > 0;
+    })());
+
+    /* (f) the export reminder */
+    step('reminder: a fresh install says it never exported', (function () {
+      state.settings.lastExportAt = 0;
+      return exportReminderText().indexOf('never exported') >= 0 && exportIsOverdue();
+    })(), exportReminderText());
+    step('reminder: exporting is recorded and shown', (function () {
+      markExported();
+      return state.settings.lastExportAt > 0 && exportReminderText() === 'Exported today.' &&
+        exportIsOverdue() === false;
+    })(), exportReminderText());
+    step('reminder: an old export counts in days', (function () {
+      state.settings.lastExportAt = Date.now() - 3 * 86400000;
+      return /Last export 3 days ago/.test(exportReminderText()) && exportIsOverdue() === false;
+    })(), exportReminderText());
+    step('reminder: the nudge fires once, not every launch', (function () {
+      state.settings.lastExportAt = 0;
+      state.settings.exportReminderShown = false;
+      var first = maybeRemindExport();
+      var second = maybeRemindExport();
+      return first === true && second === false && state.settings.exportReminderShown === true;
+    })());
+    step('reminder: the nudge stays quiet right after an export', (function () {
+      markExported();
+      state.settings.exportReminderShown = false;
+      return maybeRemindExport() === false;
+    })());
+    step('reminder: Data & settings shows when the last export was', (function () {
+      markExported();
+      syncSettingsUI();
+      return document.getElementById('exportInfo').textContent === 'Exported today.';
+    })(), document.getElementById('exportInfo').textContent);
+    step('reminder: the storage line counts relations apart from meanings', (function () {
+      syncSettingsUI();
+      /* NaN would satisfy a bare indexOf - pin the count too */
+      return document.getElementById('storageInfo').textContent.indexOf('cached relations') >= 0 &&
+        document.getElementById('storageInfo').textContent.indexOf('NaN') < 0 &&
+        /^\d+ records - \d+ cached meanings - \d+ cached relations/.test(
+          document.getElementById('storageInfo').textContent);
+    })(), document.getElementById('storageInfo').textContent);
   } catch (err) {
     R.ok = false;
     R.steps.push({ name: 'exception thrown', pass: false, info: String((err && err.stack) || err).slice(0, 400) });

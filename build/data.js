@@ -16,11 +16,17 @@ function syncSettingsUI() {
   if (info) {
     let bytes = 0;
     try { bytes = JSON.stringify(state.records).length + JSON.stringify(state.cache).length + JSON.stringify(state.tr).length; } catch (e) { bytes = 0; }
-    info.textContent = state.records.length + ' records - ' + Object.keys(state.cache).length +
-      ' cached meanings - ' + Object.keys(state.tr).length + ' cached translations - about ' +
+    /* related-word entries share the cache but are not meanings */
+    const meaningKeys = Object.keys(state.cache).filter(k => k.indexOf('rel|') !== 0).length;
+    const relKeys = Object.keys(state.cache).length - meaningKeys;
+    info.textContent = state.records.length + ' records - ' + meaningKeys +
+      ' cached meanings - ' + relKeys + ' cached relations - ' +
+      Object.keys(state.tr).length + ' cached translations - about ' +
       Math.max(1, Math.round(bytes / 1024)) + ' KB. ' + nativeDescribe() + ' ' +
       (storageOK ? 'Kept on this device (localStorage).' : 'This browser blocks storage, so data is temporary.');
   }
+  const exp = $('#exportInfo');
+  if (exp) exp.textContent = exportReminderText();
   const bak = $('#backupInfo');
   if (bak) bak.textContent = backupInfo();
   const speed = $('#speedInfo');
@@ -68,15 +74,208 @@ function toggleSwitch(id) {
   syncSettingsUI();
 }
 
+function exportStamp() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 function exportData() {
   const payload = {
     app: 'LexiCards', version: 1, exportedAt: new Date().toISOString(),
     records: state.records, settings: state.settings, custom: state.custom
   };
-  const d = new Date();
-  const stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  download('lexicards-' + stamp + '.json', JSON.stringify(payload, null, 2));
+  download('lexicards-' + exportStamp() + '.json', JSON.stringify(payload, null, 2));
+  markExported();
   showToast('Exported ' + state.records.length + ' records', 'ok');
+}
+
+/* --- tabular exports (v2.4) ---------------------------------------------------
+   JSON is the faithful backup; these two are for the tools people actually
+   open a word list in: a spreadsheet, or Anki.  Nothing is re-derived here -
+   the text is built from the records, so what lands in the file is what is
+   stored, not what the app would fetch again. */
+
+function csvCell(v) {
+  const s = String(v == null ? '' : v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function tsvCell(v) {
+  return String(v == null ? '' : v).replace(/[\t\r\n]+/g, ' ').trim();
+}
+
+function recordsCSVText() {
+  const head = ['term', 'type', 'level', 'phonetic', 'zh', 'en', 'example', 'tags', 'note', 'reviews', 'correct', 'wrong'];
+  const lines = [head.join(',')];
+  state.records.forEach(r => {
+    const st = r.stats || {};
+    lines.push([
+      csvCell(r.term), csvCell(r.type || 'word'), csvCell(cefrOf(r.term) || ''),
+      csvCell(r.phonetic || ''), csvCell((r.zh || []).join(' / ')),
+      csvCell(enTexts(r).join(' / ')), csvCell(r.example || ''),
+      csvCell((r.tags || []).join(' ')), csvCell(r.note || ''),
+      st.seen || 0, st.correct || 0, st.wrong || 0
+    ].join(','));
+  });
+  return lines.join('\r\n');
+}
+
+/* the three columns Anki's text importer asks for; the Chinese goes on the
+   first line of the back, the English below it */
+function recordsAnkiText() {
+  const lines = ['#separator:tab', '#html:true', '#columns:Term\tChinese\tTags'];
+  state.records.forEach(r => {
+    const tags = (r.tags || []).slice();
+    const lv = cefrOf(r.term);
+    if (lv && tags.indexOf(lv) < 0) tags.push(lv);
+    const back = (r.zh || []).map(z => displayZh(z)).join(' / ') +
+      (enTexts(r).length ? '\n' + enTexts(r).join('\n') : '');
+    lines.push([tsvCell(r.term), tsvCell(back), tsvCell(tags.join(' '))].join('\t'));
+  });
+  return lines.join('\r\n');
+}
+
+function exportCSV() {
+  download('lexicards-' + exportStamp() + '.csv', '\uFEFF' + recordsCSVText());
+  markExported();
+  showToast('Exported ' + state.records.length + ' records as CSV', 'ok');
+}
+function exportAnki() {
+  download('lexicards-' + exportStamp() + '.txt', recordsAnkiText());
+  markExported();
+  showToast('Exported ' + state.records.length + ' cards for Anki', 'ok');
+}
+/* --- tabular import ----------------------------------------------------------
+   Accepts what we export (CSV), what Anki exports (tab separated, with its
+   #comments) and plain "one term per line" files.  Existing entries are only
+   ever filled in, never overwritten - a word you corrected stays corrected. */
+
+/* One pass over the whole text rather than one line at a time: Anki writes a
+   back field that holds both languages as "Chinese\nEnglish", so a quoted cell
+   can span lines and a line split would tear it in two.  A quoted cell also
+   doubles any quote inside it ("say ""hi"""). */
+function parseDelimited(text) {
+  const body = String(text || '').replace(/^\uFEFF/, '');
+  const firstLine = body.split(/\r?\n/).filter(l => l.trim() && l.charAt(0) !== '#')[0] || '';
+  const delim = (firstLine.indexOf('\t') >= 0 && firstLine.indexOf(',') < 0) ? '\t' : ',';
+  const rows = [];
+  let cells = [], cur = '', quoted = false;
+  const endCell = () => { cells.push(cur); cur = ''; };
+  const endRow = () => {
+    endCell();
+    if (cells.some(c => String(c).trim())) rows.push(cells);
+    cells = [];
+  };
+  for (let i = 0; i < body.length; i++) {
+    const ch = body.charAt(i);
+    if (quoted) {
+      if (ch !== '"') { cur += ch; continue; }
+      if (body.charAt(i + 1) === '"') { cur += '"'; i++; } else quoted = false;
+    } else if (ch === '"') {
+      quoted = true;
+    } else if (ch === delim) {
+      endCell();
+    } else if (ch === '\n') {
+      endRow();
+    } else if (ch !== '\r') {
+      cur += ch;
+    }
+  }
+  if (cur.length || cells.length) endRow();
+  /* Anki's own comments (#separator, #columns, ...) are metadata, not rows */
+  while (rows.length && String(rows[0][0] || '').charAt(0) === '#') rows.shift();
+  if (rows.length && String(rows[0][0] || '').trim().toLowerCase() === 'term') rows.shift();
+  return rows;
+}
+
+function importDelimitedText(text) {
+  const rows = parseDelimited(text);
+  let added = 0, updated = 0, skipped = 0;
+  rows.forEach(cells => {
+    const term = String(cells[0] || '').trim();
+    if (!term) { skipped++; return; }
+    const wide = cells.length >= 4;              /* our own CSV column layout */
+    const back = String(cells[1] || '');
+    const nl = back.indexOf('\n');
+    const zhText = wide ? (cells[4] || '') : (nl >= 0 ? back.slice(0, nl) : back);
+    const enText = wide ? (cells[5] || '') : (nl >= 0 ? back.slice(nl + 1).replace(/\n/g, ' / ') : '');
+    const data = {
+      term: term,
+      type: wide && TYPE_LABEL[cells[1]] ? cells[1] : guessType(term),
+      zh: splitSenses(zhText),
+      en: enText ? enText.split(/\s*\/\s*/).map(t => t.trim()).filter(Boolean) : [],
+      phonetic: wide ? (cells[3] || '') : '',
+      example: wide ? (cells[6] || '') : '',
+      tags: String(wide ? (cells[7] || '') : (cells[2] || '')).split(/\s+/).filter(Boolean),
+      note: wide ? (cells[8] || '') : '',
+      source: 'import'
+    };
+    const existing = findRecordByTerm(term);
+    if (existing) {
+      let changed = false;
+      if ((!existing.zh || !existing.zh.length) && data.zh.length) { existing.zh = data.zh; changed = true; }
+      if ((!existing.en || !existing.en.length) && data.en.length) { existing.en = data.en; changed = true; }
+      if (!existing.phonetic && data.phonetic) { existing.phonetic = data.phonetic; changed = true; }
+      if (!existing.example && data.example) { existing.example = data.example; changed = true; }
+      const fresh = data.tags.filter(t => (existing.tags || []).indexOf(t) < 0);
+      if (fresh.length) { existing.tags = (existing.tags || []).concat(fresh); changed = true; }
+      if (!existing.note && data.note) { existing.note = data.note; changed = true; }
+      if (changed) { existing.updatedAt = Date.now(); updated++; } else skipped++;
+    } else {
+      upsertRecord(data);
+      added++;
+    }
+  });
+  if (added || updated) { saveRecords(); onRecordsChanged(); }
+  return { added: added, updated: updated, skipped: skipped };
+}
+
+function importDelimitedFile(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const res = importDelimitedText(String(reader.result));
+      if (!res.added && !res.updated) showToast('Nothing new in that file', 'warn');
+      else showToast('Imported: ' + res.added + ' new, ' + res.updated + ' filled in', 'ok');
+    } catch (err) {
+      showToast('Could not read that file', 'err');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+/* --- export reminder ---------------------------------------------------------
+   Nothing here is uploaded anywhere, so the copy on this device is the only
+   copy - the reminder is a nudge, once, never a nag. */
+const EXPORT_NUDGE_DAYS = 30;
+
+function markExported() {
+  state.settings.lastExportAt = Date.now();
+  saveSettings();
+  syncSettingsUI();
+}
+
+function exportReminderText() {
+  const at = state.settings.lastExportAt || 0;
+  if (!at) return 'You have never exported a backup - the records live only on this device.';
+  const days = Math.floor((Date.now() - at) / 86400000);
+  if (days <= 0) return 'Exported today.';
+  return 'Last export ' + days + ' day' + (days === 1 ? '' : 's') + ' ago.';
+}
+
+function exportIsOverdue() {
+  const at = state.settings.lastExportAt || 0;
+  return !at || (Date.now() - at) > EXPORT_NUDGE_DAYS * 86400000;
+}
+
+function maybeRemindExport() {
+  if (!exportIsOverdue() || state.settings.exportReminderShown) return false;
+  state.settings.exportReminderShown = true;
+  saveSettings();
+  showToast('Records live only on this device - a periodic Export keeps them safe', 'warn', 5200);
+  return true;
 }
 
 function importData(e) {
@@ -155,6 +354,15 @@ function initDataSheet() {
 
   const exportBtn = $('#btnExport');
   if (exportBtn) exportBtn.addEventListener('click', exportData);
+
+  const csvBtn = $('#btnExportCSV');
+  if (csvBtn) csvBtn.addEventListener('click', exportCSV);
+  const ankiBtn = $('#btnExportAnki');
+  if (ankiBtn) ankiBtn.addEventListener('click', exportAnki);
+  const importCsvBtn = $('#btnImportCSV');
+  const fileImportCsv = $('#fileImportCSV');
+  if (importCsvBtn && fileImportCsv) importCsvBtn.addEventListener('click', () => fileImportCsv.click());
+  if (fileImportCsv) fileImportCsv.addEventListener('change', importDelimitedFile);
 
   const importBtn = $('#btnImport');
   const fileInput = $('#fileImport');
